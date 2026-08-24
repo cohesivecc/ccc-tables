@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.2.1 — renderer styles (Cohesive CCC starter)
+ * ccc-tables v0.2.2 — renderer styles (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Base table typography/borders come from the CCC starter's `table_*` class
@@ -31,8 +31,12 @@
 .ccc-table_chips { display: flex; gap: .4rem; flex-wrap: wrap; }
 .ccc-table_chip { display: inline-block; border: 1px solid var(--ccc-cat-500, #2f6e63); color: var(--ccc-cat-700, #1f3d38); background: transparent; border-radius: 99px; padding: .3em .95em; font-size: .85rem; line-height: 1.4; cursor: pointer; text-decoration: none; }
 .ccc-table_chip.is-active { background: var(--ccc-cat-500, #2f6e63); color: #fff; }
-.ccc-table_footnotes { font-size: .78rem; opacity: .72; padding-top: .6em; max-width: 70ch; }
-.ccc-table_footnotes p { margin: 0 0 .35em; }
+/* Footnotes render as an attached footer row: full width, continuing the table
+   frame (side + bottom borders in the table's own Row/border token). The block
+   sits BELOW the scroll wrapper on purpose — a real tfoot would scroll
+   horizontally with wide tables and hide inside the max-height scroll region. */
+.ccc-table_footnotes { font-size: .78rem; padding: .7em 1em .55em; border-style: none solid solid; border-width: 0 1px 1px; border-color: var(--_table-row-styles---row--border, #d8dde2); }
+.ccc-table_footnotes p { margin: 0 0 .35em; opacity: .72; }
 .ccc-table_error { border: 1px dashed #b03a2e; color: #b03a2e; padding: .75em 1em; border-radius: .4em; font-size: .9rem; }
 
 /* cell tokens */

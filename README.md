@@ -17,8 +17,8 @@ Load the script and stylesheet once per page (site-wide custom code or an
 embed), pinned to a release tag:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.2.1/ccc-tables.css">
-<script src="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.2.1/ccc-tables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.2.2/ccc-tables.css">
+<script src="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.2.2/ccc-tables.min.js"></script>
 ```
 
 jsDelivr serves `.min.js`/`.min.css` automatically — no build step in this repo.
