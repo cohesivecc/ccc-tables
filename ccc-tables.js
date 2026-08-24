@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.2.0 — CMS-data-driven table renderer (Cohesive CCC starter)
+ * ccc-tables v0.2.1 — CMS-data-driven table renderer (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Renders semantic table markup from data blobs in the DOM:
@@ -18,7 +18,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '0.2.0';
+  var VERSION = '0.2.1';
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -241,8 +241,9 @@
     var fns = root.querySelector('[data-ccc-table-footnotes="' + slug + '"]');
     if (fns && fns.innerHTML.trim()) out.footnotesHTML = fns.innerHTML;
     var cfg = root.querySelector('script[type="application/json"][data-ccc-table-config="' + slug + '"]');
-    if (cfg) {
-      try { out.config = JSON.parse(cfg.textContent); }
+    var cfgText = cfg ? cfg.textContent.trim() : '';
+    if (cfgText) {
+      try { out.config = JSON.parse(cfgText); }
       catch (e) { out.configError = 'bad config JSON — ' + e.message; }
     }
     return out;

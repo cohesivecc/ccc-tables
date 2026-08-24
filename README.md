@@ -17,8 +17,8 @@ Load the script and stylesheet once per page (site-wide custom code or an
 embed), pinned to a release tag:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.2.0/ccc-tables.css">
-<script src="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.2.0/ccc-tables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.2.1/ccc-tables.css">
+<script src="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.2.1/ccc-tables.min.js"></script>
 ```
 
 jsDelivr serves `.min.js`/`.min.css` automatically — no build step in this repo.
@@ -148,6 +148,6 @@ keep the bespoke-component escape hatch.
 node --test test/parse.test.mjs
 ```
 
-No dependencies, no build. Release = tag (`git tag v0.2.0 && git push --tags`);
+No dependencies, no build. Release = tag (`git tag vX.Y.Z && git push --tags`);
 jsDelivr picks tags up automatically (purge cache at
 `https://purge.jsdelivr.net/gh/cohesivecc/ccc-tables@<tag>/…` if needed).

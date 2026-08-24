@@ -1,6 +1,6 @@
 {
   "name": "ccc-tables",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "CMS-data-driven table renderer for Cohesive benefits sites (CCC Webflow starter)",
   "main": "ccc-tables.js",
   "scripts": {
