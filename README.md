@@ -95,11 +95,15 @@ part). Emit them as tagged siblings; when present they override the blob:
 
 ```html
 <div data-ccc-table-caption="compare-plans">{{Caption field}}</div>
-<div data-ccc-table-footnotes="compare-plans">{{Footnotes rich text}}</div>
 <script type="application/json" data-ccc-table-config="compare-plans">{{Config field}}</script>
 ```
 
-Footnotes emitted this way keep their rich-text formatting verbatim.
+**Footnotes (rich text) cannot bind inside an embed** — Webflow's embed field
+picker doesn't offer Rich Text fields. Bind them with a Rich Text *element*
+instead: in the same Collection Item, add a Rich Text element bound to the
+Footnotes field, and give it a custom attribute named `data-ccc-table-footnotes`
+whose *value* is field-bound to the Slug (a Designer-only capability). The
+renderer accepts the attribute on any element and keeps the rich HTML verbatim.
 
 ### Config
 
