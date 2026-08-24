@@ -1,0 +1,15 @@
+{
+  "name": "ccc-tables",
+  "version": "0.2.0",
+  "description": "CMS-data-driven table renderer for Cohesive benefits sites (CCC Webflow starter)",
+  "main": "ccc-tables.js",
+  "scripts": {
+    "test": "node --test test/parse.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cohesivecc/ccc-tables.git"
+  },
+  "license": "MIT",
+  "private": true
+}

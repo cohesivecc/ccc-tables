@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ccc-tables dev harness</title>
+<!-- Stand-ins for the CCC starter's table_* class family (host-site dependency) -->
+<style>
+  body { font: 15px/1.5 -apple-system, system-ui, sans-serif; margin: 2rem; color: #15181d; background: #fff; }
+  section { margin-bottom: 3rem; max-width: 60rem; }
+  h2 { font-size: 1.1rem; }
+  .table_component { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .table_header, .table_cell { border: 1px solid #d8dde2; padding: .55em .8em; text-align: left; vertical-align: top; }
+  .table_header { font-weight: 600; }
+  [ccc-data] { display: none; }
+  /* demo category palette (the --ccc-cat-* bridge an ancestor provides on real sites) */
+  .cat-demo { --ccc-cat-700: #26375c; --ccc-cat-500: #3b5b92; --ccc-cat-100: #eaeef6; }
+  @media (max-width: 767px) { .table_component .table_row { display: grid; } }
+</style>
+<link rel="stylesheet" href="../ccc-tables.css">
+</head>
+<body class="cat-demo">
+<h1>ccc-tables dev harness (synthetic data)</h1>
+
+<section>
+  <h2>1 — TSV Data + split-field overlay (caption, rich footnotes, config)</h2>
+  <div ccc-data="tables">
+    <script type="application/json" data-ccc-table="tsv-demo">	Option Alpha	Option Beta	Option Gamma
+In-network
+Deductible	$1,500	$500	$0
+Coinsurance	20%	10%	5%
+Preventive care	[check]	[check]	[check]
+Out-of-network
+Deductible	$3,000^1	$1,000^1	[xmark]
+Support	[link:tel:+18005550100|Call the plan]	[link:https://example.com/beta|Beta portal]	[tip:Concierge|A human helps you pick]</script>
+    <div data-ccc-table-caption="tsv-demo">Compare the demo plans (TSV + overlay)</div>
+    <div data-ccc-table-footnotes="tsv-demo"><p><strong>1.</strong> After deductible — <em>rich text preserved</em>.</p></div>
+    <script type="application/json" data-ccc-table-config="tsv-demo">{ "stickyFirstCol": true, "collapsibleGroups": true, "mobileSwitcher": true, "highlightCol": 2 }</script>
+  </div>
+  <div ccc-table="tsv-demo"></div>
+</section>
+
+<section>
+  <h2>2 — Full-JSON Data (v0.1 compatibility: spans, headerRows, inline caption/footnotes)</h2>
+  <div ccc-data="tables">
+    <script type="application/json" data-ccc-table="json-demo">{
+      "caption": "Inline-JSON table (backward compat)",
+      "headerRows": [
+        { "cells": [ { "text": "", "rowspan": 2 }, { "text": "Tier 1", "colspan": 2 }, { "text": "Tier 2", "header": true } ] },
+        { "cells": [ { "text": "You" }, { "text": "Family" }, { "text": "All" } ] }
+      ],
+      "rows": [
+        { "cells": [ { "text": "Premium" }, { "text": "$40" }, { "text": "$120" }, { "text": "$200" } ] },
+        { "cells": [ { "text": "Wide note", "colspan": 4 } ] },
+        { "cells": [ { "text": "Coverage^2" }, { "text": "[dollar] level" }, { "text": "[check]" }, { "text": "[xmark]" } ] }
+      ],
+      "footnotes": ["^2 Inline footnote via fmt()."],
+      "config": { "highlightCol": 1 }
+    }</script>
+  </div>
+  <div ccc-table="json-demo"></div>
+</section>
+
+<section>
+  <h2>3 — Error states</h2>
+  <div ccc-table="missing-slug"></div>
+  <div ccc-data="tables">
+    <script type="application/json" data-ccc-table="broken-json">{"columns": [oops</script>
+  </div>
+  <div ccc-table="broken-json"></div>
+</section>
+
+<script src="../ccc-tables.js"></script>
+</body>
+</html>
