@@ -169,3 +169,95 @@ export function deleteCol(state, k) {
   deleteColInSection(state.rows, k, true);
   return state;
 }
+
+/* Validate a merge rectangle in grid coordinates [r,c]..[r,c]: every cell it
+   touches must lie entirely inside it, no group rows, no empty grid slots. */
+export function gridRect(state, section, a, b) {
+  const rowsArr = section === 'header' ? state.headerRows : state.rows;
+  const r1 = Math.min(a[0], b[0]), r2 = Math.max(a[0], b[0]);
+  const c1 = Math.min(a[1], b[1]), c2 = Math.max(a[1], b[1]);
+  if (r2 >= rowsArr.length) return { ok: false, reason: 'out of range' };
+  for (let r = r1; r <= r2; r++) {
+    if (section === 'body' && rowsArr[r].group) return { ok: false, reason: 'contains a group row' };
+  }
+  const { occ } = occupancy(rowsArr);
+  const owners = new Map(); // cell → its occupancy record
+  for (let r = r1; r <= r2; r++) {
+    for (let c = c1; c <= c2; c++) {
+      const o = occ[r][c];
+      if (!o) return { ok: false, reason: 'covers an empty grid slot' };
+      owners.set(o.cell, o);
+    }
+  }
+  for (const o of owners.values()) {
+    const rs = o.cell.rowspan || 1;
+    if (o.col < c1 || o.col + o.span - 1 > c2 || o.originRow < r1 || o.originRow + rs - 1 > r2) {
+      return { ok: false, reason: 'cuts across a spanning cell' };
+    }
+  }
+  return { ok: true, owners, r1, r2, c1, c2 };
+}
+
+/* Merge the rectangle into its top-left cell; covered non-empty texts are
+   kept, newline-joined, on the anchor. Returns false when the rect is invalid. */
+export function mergeCells(state, section, a, b) {
+  const v = gridRect(state, section, a, b);
+  if (!v.ok) return false;
+  const rowsArr = section === 'header' ? state.headerRows : state.rows;
+  const { occ } = occupancy(rowsArr);
+  const anchor = occ[v.r1][v.c1].cell;
+  const recs = [...v.owners.values()].sort((x, y) => x.originRow - y.originRow || x.col - y.col);
+  const texts = [];
+  recs.forEach(o => {
+    if (o.cell.text) texts.push(o.cell.text);
+    if (o.cell !== anchor) {
+      const row = rowsArr[o.originRow];
+      row.cells.splice(row.cells.indexOf(o.cell), 1);
+    }
+  });
+  anchor.text = texts.join('\n');
+  if (v.c2 - v.c1 > 0) anchor.colspan = v.c2 - v.c1 + 1; else delete anchor.colspan;
+  if (v.r2 - v.r1 > 0) anchor.rowspan = v.r2 - v.r1 + 1; else delete anchor.rowspan;
+  return true;
+}
+
+/* Split a spanning cell back into span-1 cells (the freed slots come back empty). */
+export function unmergeCell(state, section, r, cIdx) {
+  const rowsArr = section === 'header' ? state.headerRows : state.rows;
+  const row = rowsArr[r];
+  const cell = row && row.cells[cIdx];
+  if (!cell) return false;
+  const cs = cell.colspan || 1, rs = cell.rowspan || 1;
+  if (cs === 1 && rs === 1) return false;
+  const { placedRows } = occupancy(rowsArr);
+  const rec = placedRows[r].find(p => p.cell === cell);
+  delete cell.colspan;
+  delete cell.rowspan;
+  for (let i = 1; i < cs; i++) row.cells.splice(cIdx + i, 0, { text: '' });
+  for (let rr = r + 1; rr < Math.min(r + rs, rowsArr.length); rr++) {
+    const target = rowsArr[rr];
+    if (target.group) continue;
+    let idx = placedRows[rr].findIndex(p => p.col > rec.col);
+    if (idx === -1) idx = target.cells.length;
+    target.cells.splice(idx, 0, ...Array.from({ length: cs }, () => ({ text: '' })));
+  }
+  return true;
+}
+
+/* Multi-row headers: move the first body row up / the last header row down. */
+export function promoteRowToHeader(state) {
+  const row = state.rows[0];
+  if (!row || row.group) return false;
+  state.rows.shift();
+  state.headerRows.push({
+    cells: row.cells.map(c => { const o = { ...c }; delete o.header; return o; }),
+  });
+  return true;
+}
+
+export function demoteHeaderRow(state) {
+  if (state.headerRows.length <= 1) return false;
+  const row = state.headerRows.pop();
+  state.rows.unshift({ cells: row.cells });
+  return true;
+}

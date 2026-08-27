@@ -145,3 +145,75 @@ test('deleteCol: removes span-1 cells, shrinks covering spans, refuses below 2 c
   deleteCol(s, 1);
   assert.equal(colCount(s), 2); // refused — still 2 columns
 });
+
+// ---------- Task 3: merge/unmerge + header promote/demote ----------
+
+const { gridRect, mergeCells, unmergeCell, promoteRowToHeader, demoteHeaderRow } = model;
+
+function plain33() {
+  return fromParsed({
+    columns: [{ text: 'H0' }, { text: 'H1' }, { text: 'H2' }],
+    rows: [
+      { cells: [{ text: 'a0' }, { text: 'a1' }, { text: 'a2' }] },
+      { cells: [{ text: 'b0' }, { text: 'b1' }, { text: 'b2' }] },
+      { cells: [{ text: 'c0' }, { text: 'c1' }, { text: 'c2' }] },
+    ],
+  });
+}
+
+test('mergeCells: 2×2 merge sets spans on the anchor, removes covered cells, keeps text', () => {
+  const s = plain33();
+  assert.equal(mergeCells(s, 'body', [0, 1], [1, 2]), true);
+  assert.equal(s.rows[0].cells.length, 2);
+  assert.deepEqual(s.rows[0].cells[1], { text: 'a1\na2\nb1\nb2', colspan: 2, rowspan: 2 });
+  assert.equal(s.rows[1].cells.length, 1); // only b0 left
+  // grid still resolves cleanly: full rows are 3 wide, the covered row's
+  // lone cell sits at col 0 with cols 1–2 carried by the rowspan
+  const placed = ccc.resolveGrid(s.rows);
+  const width = row => row.reduce((m, p) => Math.max(m, p.col + p.span), 0);
+  assert.equal(width(placed[0]), 3);
+  assert.equal(width(placed[2]), 3);
+  assert.equal(placed[1].length, 1);
+  assert.equal(placed[1][0].col, 0);
+});
+
+test('unmergeCell: restores a uniform grid of empty cells', () => {
+  const s = plain33();
+  mergeCells(s, 'body', [0, 1], [1, 2]);
+  unmergeCell(s, 'body', 0, 1);
+  assert.equal(s.rows[0].cells.length, 3);
+  assert.equal(s.rows[1].cells.length, 3);
+  assert.ok(!s.rows[0].cells[1].colspan && !s.rows[0].cells[1].rowspan);
+  assert.deepEqual(s.rows[1].cells.map(c => c.text), ['b0', '', '']);
+});
+
+test('gridRect: refuses a rectangle that cuts a spanning cell', () => {
+  const s = plain33();
+  mergeCells(s, 'body', [0, 1], [0, 2]); // a1 now colspan 2
+  const v = gridRect(s, 'body', [0, 0], [0, 1]); // would cut the span
+  assert.equal(v.ok, false);
+  assert.equal(mergeCells(s, 'body', [0, 0], [0, 1]), false);
+});
+
+test('gridRect: refuses rectangles containing a group row', () => {
+  const s = rate3();
+  assert.equal(gridRect(s, 'body', [0, 0], [1, 1]).ok, false);
+});
+
+test('promote/demote header rows round-trip; demote refuses at one header row', () => {
+  const s = plain33();
+  assert.equal(demoteHeaderRow(s), false);
+  assert.equal(promoteRowToHeader(s), true);
+  assert.equal(s.headerRows.length, 2);
+  assert.equal(s.headerRows[1].cells[0].text, 'a0');
+  assert.equal(s.rows.length, 2);
+  assert.equal(demoteHeaderRow(s), true);
+  assert.equal(s.headerRows.length, 1);
+  assert.equal(s.rows[0].cells[0].text, 'a0');
+  assert.equal(s.rows.length, 3);
+});
+
+test('promoteRowToHeader refuses a group row', () => {
+  const s = rate3();
+  assert.equal(promoteRowToHeader(s), false);
+});
