@@ -129,5 +129,5 @@ renderer tokens · any renderer change — the builder consumes the API as-is.
 
 ## Alex chores
 
-- Enable GitHub Pages: repo Settings → Pages → Deploy from branch → `main`, `/ (root)`.
+- Enable GitHub Pages: repo Settings → Pages → Deploy from branch → `master`, `/ (root)`.
 - Push (repo is public; nothing here contains client data).

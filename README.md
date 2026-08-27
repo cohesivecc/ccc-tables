@@ -139,6 +139,26 @@ The script exposes `window.cccTables` (and CommonJS exports for Node):
 `buildTable(data, mountEl)`, `resolveGrid(rows)`, `fmt(text)`, `overlay(data, extras)`.
 The builder tool consumes these so its preview IS the production renderer.
 
+## Builder (authoring tool)
+
+`builder/` is a standalone static page for Marketer-seat contributors: paste a
+range copied from Excel/Google Sheets (or an existing `Data` field), click-
+configure it (group rows, cell merges, multi-row headers, highlight column,
+token palette, caption/footnotes/options), and copy the four CMS field values —
+**Data** (TSV when round-trip-safe, else JSON with a stated reason), **Caption**,
+**Footnotes** (pastes as rich text), **Config**. The preview pane loads the
+pinned jsDelivr build of this renderer (release-tag picker, mobile width
+toggle), fed the exact strings the copy buttons emit — preview == production.
+Drafts autosave to the browser's localStorage.
+
+Hosted via GitHub Pages (Settings → Pages → Deploy from branch → `master`,
+`/ (root)`): `https://cohesivecc.github.io/ccc-tables/builder/`. Cell richness
+is tokens-only by design — the builder never inserts site components.
+
+Develop: serve the repo root over HTTP (ES modules don't load from `file://`),
+e.g. `python3 -m http.server`, then open `/builder/`. Logic tests:
+`node --test test/builder-*.test.mjs`.
+
 ## The two-species rule
 
 Route by one question: **do readers compare values across columns, or scan rows
@@ -149,7 +169,7 @@ keep the bespoke-component escape hatch.
 ## Develop
 
 ```
-node --test test/parse.test.mjs
+node --test test/*.test.mjs
 ```
 
 No dependencies, no build. Release = tag (`git tag vX.Y.Z && git push --tags`);
