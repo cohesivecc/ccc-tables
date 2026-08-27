@@ -71,3 +71,77 @@ test('colCount: resolved width of a spanned multi-row header', () => {
   });
   assert.equal(colCount(s), 4);
 });
+
+// ---------- Task 2: cell/row/column ops ----------
+
+const { setCell, addRow, deleteRow, moveRow, toggleGroup, addColAfter, deleteCol } = model;
+
+function rate3() {
+  // 3 grid cols: label + 2 plans, one group row, two data rows
+  return fromParsed(ccc.parseTSV('\tA\tB\nIn-network\nDeductible\t$1\t$2\nCoinsurance\t20%\t10%'));
+}
+
+test('setCell: writes text in header and body sections', () => {
+  const s = rate3();
+  setCell(s, 'header', 0, 1, 'Plan A');
+  setCell(s, 'body', 1, 2, '$9');
+  assert.equal(s.headerRows[0].cells[1].text, 'Plan A');
+  assert.equal(s.rows[1].cells[2].text, '$9');
+});
+
+test('addRow/deleteRow/moveRow', () => {
+  const s = rate3();
+  addRow(s, 1);
+  assert.equal(s.rows.length, 4);
+  assert.deepEqual(s.rows[1].cells.map(c => c.text), ['', '', '']);
+  moveRow(s, 1, 3);
+  assert.equal(s.rows[3].cells[0].text, '');
+  deleteRow(s, 3);
+  assert.equal(s.rows.length, 3);
+  assert.equal(s.rows[0].group, true);
+});
+
+test('toggleGroup: normal→group keeps first cell only; group→normal pads to colCount', () => {
+  const s = rate3();
+  toggleGroup(s, 1);
+  assert.equal(s.rows[1].group, true);
+  assert.deepEqual(s.rows[1].cells, [{ text: 'Deductible' }]);
+  toggleGroup(s, 0);
+  assert.ok(!s.rows[0].group);
+  assert.deepEqual(s.rows[0].cells.map(c => c.text), ['In-network', '', '']);
+});
+
+test('addColAfter: inserts a cell in plain rows, grows a spanning cell, skips group rows', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [
+      { group: true, cells: [{ text: 'G' }] },
+      { cells: [{ text: 'wide', colspan: 2 }, { text: 'b' }] },
+      { cells: [{ text: 'x' }, { text: 'y' }, { text: 'z' }] },
+    ],
+  });
+  addColAfter(s, 0); // boundary 0|1 sits inside the colspan-2 cell
+  assert.deepEqual(s.headerRows[0].cells.map(c => c.text), ['', '', 'A', 'B']);
+  assert.equal(s.rows[1].cells[0].colspan, 3); // span grew across the insertion
+  assert.equal(s.rows[1].cells.length, 2);
+  assert.deepEqual(s.rows[2].cells.map(c => c.text), ['x', '', 'y', 'z']);
+  assert.deepEqual(s.rows[0].cells, [{ text: 'G' }]); // group untouched
+  assert.equal(colCount(s), 4);
+});
+
+test('deleteCol: removes span-1 cells, shrinks covering spans, refuses below 2 columns', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [
+      { cells: [{ text: 'wide', colspan: 2 }, { text: 'b' }] },
+      { cells: [{ text: 'x' }, { text: 'y' }, { text: 'z' }] },
+    ],
+  });
+  deleteCol(s, 1);
+  assert.deepEqual(s.headerRows[0].cells.map(c => c.text), ['', 'B']);
+  assert.equal(s.rows[0].cells.length, 2);
+  assert.ok(!s.rows[0].cells[0].colspan); // 2 → 1 → key dropped
+  assert.deepEqual(s.rows[1].cells.map(c => c.text), ['x', 'z']);
+  deleteCol(s, 1);
+  assert.equal(colCount(s), 2); // refused — still 2 columns
+});
