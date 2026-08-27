@@ -5,7 +5,7 @@
  * Pure logic, node-testable. Uses globalThis.cccTables (see model.js).
  */
 
-import { colCount } from './model.js';
+import { colCount, fromParsed } from './model.js';
 
 function ccc() { return globalThis.cccTables; }
 
@@ -66,6 +66,51 @@ export function footnotesHTML(state) {
 
 export function captionText(state) {
   return (state.caption || '').trim();
+}
+
+/* Data field, TSV form: header texts, then rows; a group row is its bare
+   label line (exactly what parseTSV re-detects). */
+export function toTSV(state) {
+  const lines = [state.headerRows[0].cells.map(c => c.text || '').join('\t')];
+  state.rows.forEach(r => {
+    if (r.group) lines.push((r.cells[0] || {}).text || '');
+    else lines.push(r.cells.map(c => c.text || '').join('\t'));
+  });
+  return lines.join('\n');
+}
+
+/* Route the Data field: TSV when the state survives a full round-trip through
+   the REAL parseTSV, else JSON with a human reason. Explicit checks give the
+   friendly reasons; the round-trip compare is the final safety net. */
+export function dataFieldValue(state) {
+  const json = reason => ({ format: 'json', value: toJSONData(state), reason });
+  if (state.headerRows.length > 1) return json('multi-row header');
+  const spans = c => c.colspan > 1 || c.rowspan > 1;
+  if (state.headerRows[0].cells.some(spans) ||
+      state.rows.some(r => r.cells.some(spans))) return json('merged cells');
+  if (state.rows.some(r => !r.group && r.cells.some(c => c.header))) {
+    return json('a header flag on a body cell');
+  }
+  const cells = [...state.headerRows[0].cells, ...state.rows.flatMap(r => r.cells)];
+  if (cells.some(c => /[\t\n\r]/.test(c.text || ''))) {
+    return json('a cell contains a tab or line break');
+  }
+  if (cells.some(c => (c.text || '') !== (c.text || '').trim())) {
+    return json('a cell has spaces the TSV parser would trim');
+  }
+  if (!(state.config && state.config.tsvGroups === false)) {
+    const misdetected = state.rows.some(r => !r.group &&
+      (r.cells[0] || {}).text &&
+      r.cells.slice(1).every(c => !c.text));
+    if (misdetected) return json('a row would re-parse as a group row');
+  }
+  const tsv = toTSV(state);
+  try {
+    const re = fromParsed(ccc().parseData(tsv, state.config));
+    const grid = s => JSON.stringify({ h: s.headerRows, r: s.rows });
+    if (grid(re) === grid(state)) return { format: 'tsv', value: tsv };
+  } catch (e) { /* fall through to JSON */ }
+  return json('not round-trip-safe as TSV');
 }
 
 /* Errors: the emitted Data string must survive the real parser.

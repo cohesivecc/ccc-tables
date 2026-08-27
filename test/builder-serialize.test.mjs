@@ -91,3 +91,87 @@ test('validate: round-trip — parseData(toJSONData) grid-equals the state', () 
   assert.deepEqual(re.headerRows, s.headerRows);
   assert.deepEqual(re.rows, s.rows);
 });
+
+// ---------- Task 5: TSV export + representability + dataFieldValue ----------
+
+const { toTSV, dataFieldValue } = ser;
+
+test('toTSV + round-trip: a plain grouped rate table routes to TSV', () => {
+  const src = '\tHSA Core\tHSA Value\nIn-network\nDeductible\t$1,500\t$500\nCoinsurance\t20%\t10%';
+  const s = fromParsed(ccc.parseTSV(src));
+  const out = dataFieldValue(s);
+  assert.equal(out.format, 'tsv');
+  const re = fromParsed(ccc.parseData(out.value, s.config));
+  assert.deepEqual(re.headerRows, s.headerRows);
+  assert.deepEqual(re.rows, s.rows);
+  assert.match(out.value, /^\tHSA Core\tHSA Value\n/); // leading empty header cell kept
+  assert.match(out.value, /\nIn-network\n/);           // group row = bare label line
+});
+
+test('dataFieldValue: merged cells route to JSON with a reason', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [{ cells: [{ text: 'wide', colspan: 2 }, { text: 'b' }] }],
+  });
+  const out = dataFieldValue(s);
+  assert.equal(out.format, 'json');
+  assert.match(out.reason, /merged/i);
+  assert.ok(JSON.parse(out.value).rows);
+});
+
+test('dataFieldValue: multi-row header routes to JSON with a reason', () => {
+  const s = fromParsed({
+    headerRows: [{ cells: [{ text: 'A' }, { text: 'B' }] }, { cells: [{ text: 'C' }, { text: 'D' }] }],
+    rows: [{ cells: [{ text: '1' }, { text: '2' }] }],
+  });
+  const out = dataFieldValue(s);
+  assert.equal(out.format, 'json');
+  assert.match(out.reason, /multi-row header/i);
+});
+
+test('dataFieldValue: header flag on a body cell routes to JSON', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: 'A' }],
+    rows: [{ cells: [{ text: 'x' }, { text: 'y', header: true }] }],
+  });
+  const out = dataFieldValue(s);
+  assert.equal(out.format, 'json');
+  assert.match(out.reason, /header/i);
+});
+
+test('dataFieldValue: a row that would re-parse as a group row routes to JSON', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [{ cells: [{ text: 'filled' }, { text: '' }, { text: '' }] }], // NOT a group row
+  });
+  const out = dataFieldValue(s);
+  assert.equal(out.format, 'json');
+  assert.match(out.reason, /group/i);
+});
+
+test('dataFieldValue: group misdetection is fine when tsvGroups is off', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [{ cells: [{ text: 'filled' }, { text: '' }, { text: '' }] }],
+  });
+  s.config = { tsvGroups: false };
+  assert.equal(dataFieldValue(s).format, 'tsv');
+});
+
+test('dataFieldValue: tab or newline in a cell routes to JSON', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: 'A' }],
+    rows: [{ cells: [{ text: 'two\nlines' }, { text: 'y' }] }],
+  });
+  const out = dataFieldValue(s);
+  assert.equal(out.format, 'json');
+  assert.match(out.reason, /line break|tab/i);
+});
+
+test('dataFieldValue: text the TSV parser would trim routes to JSON', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: 'A' }],
+    rows: [{ cells: [{ text: ' padded ' }, { text: 'y' }] }],
+  });
+  assert.equal(dataFieldValue(s).format, 'json');
+});
