@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ccc-tables builder</title>
+<link rel="stylesheet" href="builder.css">
+</head>
+<body>
+
+<header class="bar">
+  <h1>ccc-tables builder</h1>
+  <div class="bar_right">
+    <label class="bar_field">Preview renderer
+      <select id="version"></select>
+    </label>
+    <button id="load-sample" type="button">Load sample</button>
+    <button id="new-table" type="button">New</button>
+    <span id="autosave" class="bar_note" hidden>draft saved</span>
+  </div>
+</header>
+
+<p class="intro">
+  Author a table for the site's <strong>Tables</strong> CMS collection: paste a range
+  copied from Excel/Google&nbsp;Sheets (or an existing <code>Data</code> field), click-configure
+  it, then copy each field below into the CMS. The preview is the production renderer —
+  what you see is what publishes. Colors come from each site's own palette.
+</p>
+
+<main class="layout">
+  <section class="work">
+    <details class="paste" id="paste-details" open>
+      <summary>Paste data (Excel/Sheets range, or an existing Data field)</summary>
+      <textarea id="paste-box" rows="6" spellcheck="false"
+        placeholder="Copy the range in Excel and paste here — the first row becomes the header."></textarea>
+      <div class="paste_row">
+        <button id="import" type="button">Import</button>
+        <span id="import-status" class="status"></span>
+      </div>
+    </details>
+
+    <div class="toolbar" id="grid-toolbar">
+      <div class="toolbar_group" aria-label="Rows">
+        <button data-act="add-row" type="button" title="Add a row below the selection">+ Row</button>
+        <button data-act="del-row" type="button" title="Delete the selected row">− Row</button>
+        <button data-act="row-up" type="button" title="Move the selected row up">↑</button>
+        <button data-act="row-down" type="button" title="Move the selected row down">↓</button>
+        <button data-act="group" type="button" title="Group rows label a band of rows (e.g. a salary band) and can collapse">Group row</button>
+      </div>
+      <div class="toolbar_group" aria-label="Columns">
+        <button data-act="add-col" type="button" title="Add a column after the selection">+ Column</button>
+        <button data-act="del-col" type="button" title="Delete the selected column">− Column</button>
+        <button data-act="highlight" type="button" title="Tint the selected column (e.g. a recommended plan)">Highlight</button>
+      </div>
+      <div class="toolbar_group" aria-label="Cells">
+        <button data-act="merge" type="button" title="Merge the selected rectangle of cells (click one corner, shift-click the other)">Merge</button>
+        <button data-act="unmerge" type="button" title="Split the selected merged cell">Unmerge</button>
+      </div>
+      <div class="toolbar_group" aria-label="Header">
+        <button data-act="promote" type="button" title="Move the first body row into the header (multi-row header)">Row → Header</button>
+        <button data-act="demote" type="button" title="Move the last header row back into the body">Header → Row</button>
+      </div>
+    </div>
+
+    <div class="toolbar toolbar-tokens" aria-label="Cell tokens">
+      <span class="toolbar_label">Insert into cell:</span>
+      <button data-token="[check]" type="button" title="A check icon — “covered / yes”">✓ check</button>
+      <button data-token="[xmark]" type="button" title="An x icon — “not covered / no”">✕ xmark</button>
+      <button data-token="[dollar]" type="button" title="A dollar icon">$ dollar</button>
+      <button data-token="[link:https://example.com|label]" type="button" title="A link — edit the url and label">link</button>
+      <button data-token="[tip:term|explanation]" type="button" title="A hover tooltip — edit the term and explanation">tip</button>
+      <button data-token="^1" type="button" title="A footnote marker — superscript number matching a footnote line">^1 footnote</button>
+    </div>
+
+    <div id="grid" class="grid" aria-label="Table editor"></div>
+    <p id="grid-status" class="status" role="status"></p>
+  </section>
+
+  <aside class="panel">
+    <label class="panel_field">Caption
+      <input id="caption" type="text" placeholder="e.g. 2027 Biweekly Medical Premiums — …">
+    </label>
+
+    <label class="panel_field">Footnotes <span class="hint">(one per line)</span>
+      <textarea id="footnotes" rows="4" spellcheck="true"
+        placeholder="* Rates shown are biweekly.&#10;** Includes the wellness credit."></textarea>
+    </label>
+
+    <fieldset class="panel_field">
+      <legend>Options</legend>
+      <label><input type="checkbox" id="cfg-stickyFirstCol"> Sticky first column</label>
+      <label><input type="checkbox" id="cfg-collapsibleGroups"> Collapsible group rows</label>
+      <label><input type="checkbox" id="cfg-mobileSwitcher"> Mobile plan switcher</label>
+    </fieldset>
+
+    <h2 class="panel_heading">Copy into the CMS</h2>
+    <div class="out" id="out-data">
+      <div class="out_head"><strong>Data</strong> <span class="out_status"></span>
+        <button class="copy" type="button">Copy</button></div>
+      <pre class="out_value" tabindex="0"></pre>
+    </div>
+    <div class="out" id="out-caption">
+      <div class="out_head"><strong>Caption</strong> <span class="out_status"></span>
+        <button class="copy" type="button">Copy</button></div>
+      <pre class="out_value" tabindex="0"></pre>
+    </div>
+    <div class="out" id="out-footnotes">
+      <div class="out_head"><strong>Footnotes</strong> <span class="out_status"></span>
+        <button class="copy" type="button">Copy</button></div>
+      <pre class="out_value" tabindex="0"></pre>
+    </div>
+    <div class="out" id="out-config">
+      <div class="out_head"><strong>Config</strong> <span class="out_status"></span>
+        <button class="copy" type="button">Copy</button></div>
+      <pre class="out_value" tabindex="0"></pre>
+    </div>
+    <p id="warnings" class="status"></p>
+  </aside>
+</main>
+
+<section class="preview">
+  <div class="preview_bar">
+    <h2>Preview <span class="hint">— the production renderer, verbatim</span></h2>
+    <div class="preview_widths">
+      <button id="w-desktop" type="button" class="is-active">Desktop</button>
+      <button id="w-mobile" type="button">Mobile (375px)</button>
+    </div>
+  </div>
+  <iframe id="preview" title="Table preview"></iframe>
+</section>
+
+<script src="../ccc-tables.js"></script>
+<script type="module" src="builder.js"></script>
+</body>
+</html>
