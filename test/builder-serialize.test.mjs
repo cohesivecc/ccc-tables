@@ -175,3 +175,54 @@ test('dataFieldValue: text the TSV parser would trim routes to JSON', () => {
   });
   assert.equal(dataFieldValue(s).format, 'json');
 });
+
+// ---------- Task 6: real-shape fixtures (synthetic values only) ----------
+
+function roundTrip(s) {
+  const out = dataFieldValue(s);
+  const re = fromParsed(ccc.parseData(out.value, s.config));
+  assert.deepEqual(re.headerRows, s.headerRows);
+  assert.deepEqual(re.rows, s.rows);
+  return out;
+}
+
+test('fixture: grouped 2-band × 4-tier rate table (medical shape) → TSV', () => {
+  const s = fromParsed(ccc.parseData(JSON.stringify({
+    columns: [{ text: 'Coverage Level' }, { text: 'Plan One' }, { text: 'Plan Two' }, { text: 'Plan Three' }],
+    rows: [
+      { group: true, cells: [{ text: 'Employees Who Earn Less Than $100,000' }] },
+      { cells: [{ text: 'Employee Only' }, { text: '$10.00' }, { text: '$20.00' }, { text: '$30.00' }] },
+      { cells: [{ text: 'Family' }, { text: '$40.00' }, { text: '$50.00' }, { text: '$60.00' }] },
+      { group: true, cells: [{ text: 'Employees Who Earn More Than $100,000' }] },
+      { cells: [{ text: 'Employee Only' }, { text: '$11.00' }, { text: '$21.00' }, { text: '$31.00' }] },
+      { cells: [{ text: 'Family' }, { text: '$41.00' }, { text: '$51.00' }, { text: '$61.00' }] },
+    ],
+  })));
+  s.config = { stickyFirstCol: true, collapsibleGroups: true, mobileSwitcher: true };
+  assert.equal(roundTrip(s).format, 'tsv');
+});
+
+test('fixture: colspan comparison with header:true body cells (coverage-ends shape) → JSON', () => {
+  const s = fromParsed(ccc.parseData(JSON.stringify({
+    columns: [{ text: 'Benefit' }, { text: 'Leaving' }, { text: 'Retiring' }, { text: 'Status Change' }],
+    rows: [
+      { cells: [{ text: 'All medical plans', header: true }, { text: 'Coverage ends', colspan: 2 }, { text: '[check]' }] },
+      { cells: [{ text: 'Dental', header: true }, { text: '[xmark]' }, { text: '[check]' }, { text: '[check]' }] },
+    ],
+  })));
+  const out = roundTrip(s);
+  assert.equal(out.format, 'json');
+});
+
+test('fixture: 2-row spanned header (demo shape) → JSON, multi-row header reason', () => {
+  const s = fromParsed(ccc.parseData(JSON.stringify({
+    headerRows: [
+      { cells: [{ text: '', rowspan: 2 }, { text: 'Tier 1', colspan: 2 }, { text: 'Tier 2' }] },
+      { cells: [{ text: 'You' }, { text: 'Family' }, { text: 'All' }] },
+    ],
+    rows: [{ cells: [{ text: 'Premium' }, { text: '$40' }, { text: '$120' }, { text: '$200' }] }],
+  })));
+  const out = roundTrip(s);
+  assert.equal(out.format, 'json');
+  assert.match(out.reason, /multi-row header/);
+});
