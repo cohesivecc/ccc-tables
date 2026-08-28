@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.4.0 — renderer styles (Cohesive CCC starter)
+ * ccc-tables v0.4.1 — renderer styles (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Base table typography/borders come from the CCC starter's `table_*` class
@@ -59,6 +59,12 @@
    horizontally with wide tables and hide inside the max-height scroll region. */
 :where(.ccc-table_footnotes) { font-size: .78rem; padding: .7em 1em .55em; border-style: none solid solid; border-width: 0 1px 1px; border-color: var(--_table-row-styles---row--border, #d8dde2); }
 :where(.ccc-table_footnotes p) { margin: 0 0 .35em; opacity: .72; }
+/* A <ul> footnote list keeps its usual margins only toward SIBLING content:
+   no margin-top unless something (e.g. a <p>) precedes it, no margin-bottom
+   unless something follows — so the common lone-<ul> footnotes sit flush.
+   Deliberately NOT zero-specificity: must out-rank the host's base `ul` rule. */
+:where(.ccc-table_footnotes) ul:first-child { margin-top: 0; }
+:where(.ccc-table_footnotes) ul:last-child { margin-bottom: 0; }
 :where(.ccc-table_error) { border: 1px dashed var(--ccc-danger, #b03a2e); color: var(--ccc-danger, #b03a2e); padding: .75em 1em; border-radius: .4em; font-size: .9rem; }
 
 /* cell tokens */

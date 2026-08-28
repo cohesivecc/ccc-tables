@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.4.0 — CMS-data-driven table renderer (Cohesive CCC starter)
+ * ccc-tables v0.4.1 — CMS-data-driven table renderer (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Renders semantic table markup from data blobs in the DOM:
@@ -18,7 +18,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '0.4.0';
+  var VERSION = '0.4.1';
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
