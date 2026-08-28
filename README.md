@@ -87,6 +87,16 @@ Coinsurance	20%	10%
 `headerRows` (array of row objects) replaces `columns` for multi-row headers
 with spans.
 
+A group row may carry cells beyond its label (**v0.3+**) — they render as
+header cells with their spans, so a collapsible band can head sub-columns:
+
+```json
+{ "group": true, "cells": [{ "text": "Prescription Drugs" },
+  { "text": "Retail", "colspan": 2 }, { "text": "Mail", "colspan": 2 }] }
+```
+
+Renderers before 0.3 show only the label.
+
 ### Split-field overlay
 
 Caption, footnotes, and config can live in their own CMS fields instead of the

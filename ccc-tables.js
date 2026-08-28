@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.2.2 — CMS-data-driven table renderer (Cohesive CCC starter)
+ * ccc-tables v0.3.0 — CMS-data-driven table renderer (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Renders semantic table markup from data blobs in the DOM:
@@ -18,7 +18,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '0.2.2';
+  var VERSION = '0.3.0';
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -126,31 +126,46 @@
       var tr = el('tr', 'table_row');
       if (row.group) {
         tr.classList.add('is-legend-row', 'ccc-table_group-row');
-        var td = el('th', 'table_header is-row-header', '');
-        td.colSpan = 99;
-        td.setAttribute('scope', 'colgroup');
+        /* v0.3: a group row may keep cells beyond its label — they render as
+           header cells with their spans (e.g. "Rx | Retail | Mail"). A
+           label-only group row keeps the classic full-width band. */
+        var multi = (row.cells || []).length > 1;
         if (cfg.collapsibleGroups) {
-          var btn = el('button', 'ccc-table_group-toggle');
-          btn.type = 'button';
-          btn.setAttribute('aria-expanded', 'true');
-          var lbl = el('span');
-          lbl.innerHTML = fmt((row.cells[0] || {}).text || '');
-          btn.appendChild(lbl);
-          btn.appendChild(el('span', 'ccc-table_group-chevron', '▾'));
-          td.appendChild(btn);
           groupIdx++;
           tr.setAttribute('data-group', groupIdx);
-          btn.addEventListener('click', (function (g) {
-            return function (e) {
-              var open = e.currentTarget.getAttribute('aria-expanded') === 'true';
-              e.currentTarget.setAttribute('aria-expanded', String(!open));
-              tbody.querySelectorAll('[data-in-group="' + g + '"]').forEach(function (r) { r.style.display = open ? 'none' : ''; });
-            };
-          })(groupIdx));
-        } else {
-          td.innerHTML = fmt((row.cells[0] || {}).text || '');
         }
-        tr.appendChild(td);
+        placed.forEach(function (p, idx) {
+          if (idx > 0 && !multi) return;
+          var td = el('th', idx === 0 ? 'table_header is-row-header' : 'table_header', '');
+          td.setAttribute('scope', 'colgroup');
+          if (multi) {
+            if (p.cell.colspan) td.colSpan = p.cell.colspan;
+            if (p.cell.rowspan) td.rowSpan = p.cell.rowspan;
+            td.setAttribute('data-col', p.col);
+          } else {
+            td.colSpan = 99;
+          }
+          if (idx === 0 && cfg.collapsibleGroups) {
+            var btn = el('button', 'ccc-table_group-toggle');
+            btn.type = 'button';
+            btn.setAttribute('aria-expanded', 'true');
+            var lbl = el('span');
+            lbl.innerHTML = fmt((p.cell || {}).text || '');
+            btn.appendChild(lbl);
+            btn.appendChild(el('span', 'ccc-table_group-chevron', '▾'));
+            td.appendChild(btn);
+            btn.addEventListener('click', (function (g) {
+              return function (e) {
+                var open = e.currentTarget.getAttribute('aria-expanded') === 'true';
+                e.currentTarget.setAttribute('aria-expanded', String(!open));
+                tbody.querySelectorAll('[data-in-group="' + g + '"]').forEach(function (r) { r.style.display = open ? 'none' : ''; });
+              };
+            })(groupIdx));
+          } else {
+            td.innerHTML = fmt((p.cell || {}).text || '');
+          }
+          tr.appendChild(td);
+        });
       } else {
         placed.forEach(function (p) {
           var isHead = p.cell.header || p.col === 0;
@@ -169,7 +184,8 @@
     });
     table.appendChild(tbody);
     var hasBodySpans = (data.rows || []).some(function (r) {
-      return !r.group && (r.cells || []).some(function (c) { return (c.colspan || 1) > 1 || (c.rowspan || 1) > 1; });
+      if (r.group && (r.cells || []).length < 2) return false;
+      return (r.cells || []).some(function (c) { return (c.colspan || 1) > 1 || (c.rowspan || 1) > 1; });
     });
     var lastHead = resolveGrid(headRows)[headRows.length - 1] || [];
     var colCount = lastHead.reduce(function (m, p) { return Math.max(m, p.col + p.span); }, 0);
