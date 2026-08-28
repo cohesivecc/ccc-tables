@@ -172,7 +172,7 @@ must go through the builder (which emits JSON for them). Renderer quote-handling
 a v0.3 candidate.
 
 Develop: serve the repo root over HTTP (ES modules don't load from `file://`),
-e.g. `python3 -m http.server`, then open `/builder/`. Logic tests:
+`python3 scripts/serve.py` (a no-store static server — plain `http.server` lets the browser cache modules stale), then open `/builder/`. Logic tests:
 `node --test test/builder-*.test.mjs`.
 
 ## The two-species rule
