@@ -112,14 +112,62 @@ export function toggleGroup(state, r) {
   if (!row) return state;
   if (row.group) {
     delete row.group;
-    const cells = [{ text: (row.cells[0] || {}).text || '' }];
-    while (cells.length < colCount(state)) cells.push({ text: '' });
-    row.cells = cells;
+    while (row.cells.length < colCount(state)) row.cells.push({ text: '' });
   } else {
     row.group = true;
-    row.cells = [{ text: (row.cells[0] || {}).text || '' }];
+    // Keep the row's data — renderer ≥ 0.3 renders a group row's extra cells;
+    // older renderers show just the label. Only a trailing run of empty
+    // span-1 cells is trimmed so a plain label row stays label-only.
+    let n = row.cells.length;
+    while (n > 1) {
+      const c = row.cells[n - 1];
+      if (c.text || c.colspan > 1 || c.rowspan > 1) break;
+      n--;
+    }
+    row.cells.length = n;
   }
   return state;
+}
+
+/* Swap grid column k with its neighbor (dir = ±1). Refuses when a spanning
+   cell touches either column — split merges first. Group rows keep their own
+   layout and are skipped. */
+export function moveCol(state, k, dir) {
+  const to = k + dir;
+  const n = colCount(state);
+  if (k < 0 || to < 0 || k >= n || to >= n) return false;
+  const lo = Math.min(k, to);
+  const sections = [
+    { rowsArr: state.headerRows, isBody: false },
+    { rowsArr: state.rows, isBody: true },
+  ];
+  for (const { rowsArr, isBody } of sections) {
+    const { occ } = occupancy(rowsArr);
+    for (let r = 0; r < rowsArr.length; r++) {
+      if (isBody && rowsArr[r].group) continue;
+      for (const cc of [lo, lo + 1]) {
+        const o = occ[r][cc];
+        if (o && (o.span > 1 || (o.cell.rowspan || 1) > 1)) return false;
+      }
+    }
+  }
+  for (const { rowsArr, isBody } of sections) {
+    const { placedRows } = occupancy(rowsArr);
+    rowsArr.forEach((row, r) => {
+      if (isBody && row.group) return;
+      const a = placedRows[r].find(p => p.col === lo);
+      const b = placedRows[r].find(p => p.col === lo + 1);
+      if (a && b) {
+        const ia = row.cells.indexOf(a.cell), ib = row.cells.indexOf(b.cell);
+        row.cells[ia] = b.cell;
+        row.cells[ib] = a.cell;
+      } else if (a && !b) {
+        // underfilled row: the moving cell shifts right past an implicit empty
+        row.cells.splice(row.cells.indexOf(a.cell), 0, { text: '' });
+      }
+    });
+  }
+  return true;
 }
 
 /* Insert a new grid column after absolute column k, in one section. A cell

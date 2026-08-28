@@ -101,14 +101,20 @@ test('addRow/deleteRow/moveRow', () => {
   assert.equal(s.rows[0].group, true);
 });
 
-test('toggleGroup: normal→group keeps first cell only; group→normal pads to colCount', () => {
+test('toggleGroup: normal→group PRESERVES cells (trailing empties trimmed); group→normal pads', () => {
   const s = rate3();
-  toggleGroup(s, 1);
+  toggleGroup(s, 1); // ['Deductible','$1','$2'] — data kept
   assert.equal(s.rows[1].group, true);
-  assert.deepEqual(s.rows[1].cells, [{ text: 'Deductible' }]);
-  toggleGroup(s, 0);
+  assert.deepEqual(s.rows[1].cells.map(c => c.text), ['Deductible', '$1', '$2']);
+  toggleGroup(s, 1); // back to a normal row, nothing lost
+  assert.ok(!s.rows[1].group);
+  assert.deepEqual(s.rows[1].cells.map(c => c.text), ['Deductible', '$1', '$2']);
+  toggleGroup(s, 0); // imported label-only group → ungroup pads
   assert.ok(!s.rows[0].group);
   assert.deepEqual(s.rows[0].cells.map(c => c.text), ['In-network', '', '']);
+  s.rows[2].cells[1].text = ''; s.rows[2].cells[2].text = '';
+  toggleGroup(s, 2); // all-empty tail is trimmed → label-only group
+  assert.deepEqual(s.rows[2].cells, [{ text: 'Coinsurance' }]);
 });
 
 test('addColAfter: inserts a cell in plain rows, grows a spanning cell, skips group rows', () => {
@@ -216,4 +222,34 @@ test('promote/demote header rows round-trip; demote refuses at one header row', 
 test('promoteRowToHeader refuses a group row', () => {
   const s = rate3();
   assert.equal(promoteRowToHeader(s), false);
+});
+
+// ---------- moveCol + insert-before-first ----------
+
+const { moveCol } = model;
+
+test('addColAfter(-1): inserts a new first column', () => {
+  const s = plain33();
+  addColAfter(s, -1);
+  assert.deepEqual(s.headerRows[0].cells.map(c => c.text), ['', 'H0', 'H1', 'H2']);
+  assert.deepEqual(s.rows[0].cells.map(c => c.text), ['', 'a0', 'a1', 'a2']);
+  assert.equal(colCount(s), 4);
+});
+
+test('moveCol: swaps adjacent columns in header and body, skips group rows', () => {
+  const s = rate3();
+  assert.equal(moveCol(s, 1, 1), true); // A ↔ B
+  assert.deepEqual(s.headerRows[0].cells.map(c => c.text), ['', 'B', 'A']);
+  assert.deepEqual(s.rows[1].cells.map(c => c.text), ['Deductible', '$2', '$1']);
+  assert.deepEqual(s.rows[0].cells, [{ text: 'In-network' }]); // group untouched
+  assert.equal(moveCol(s, 2, 1), false); // off the edge
+});
+
+test('moveCol: refuses when a span crosses the boundary', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [{ cells: [{ text: 'wide', colspan: 2 }, { text: 'b' }] }],
+  });
+  assert.equal(moveCol(s, 0, 1), false);
+  assert.equal(moveCol(s, 1, 1), false); // 'wide' covers col 1; boundary 1|2 touches it
 });

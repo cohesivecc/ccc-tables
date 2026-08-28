@@ -54,13 +54,13 @@ test('configJSON: non-defaults only; empty config → empty string', () => {
   assert.deepEqual(JSON.parse(configJSON(s)), { tsvGroups: false });
 });
 
-test('footnotesHTML: escaped <ul>, empty when no lines', () => {
+test('footnotesHTML: escaped <p> lines, empty when no lines', () => {
   const s = fromParsed({ columns: [{ text: 'A' }, { text: 'B' }], rows: [] });
   assert.equal(footnotesHTML(s), '');
   s.footnotes = ['* Rates are biweekly.', 'Tobacco & <spouse> rule'];
   assert.equal(
     footnotesHTML(s),
-    '<ul><li>* Rates are biweekly.</li><li>Tobacco &amp; &lt;spouse&gt; rule</li></ul>'
+    '<p>* Rates are biweekly.</p><p>Tobacco &amp; &lt;spouse&gt; rule</p>'
   );
 });
 
@@ -280,4 +280,27 @@ test('excel paste with merged cells + multiline labels imports whole and routes 
   assert.match(out.reason, /line break/i);
   const re = fromParsed(ccc.parseData(out.value, s.config));
   assert.deepEqual(re.rows, s.rows);
+});
+
+// ---------- footnotes as <p> lines + group rows with extra cells ----------
+
+test('footnotesHTML: <p> per line, no bullet list', () => {
+  const s = fromParsed({ columns: [{ text: 'A' }, { text: 'B' }], rows: [] });
+  s.footnotes = ['* Biweekly.', '† ER surcharge & <caveat>'];
+  assert.equal(footnotesHTML(s), '<p>* Biweekly.</p><p>† ER surcharge &amp; &lt;caveat&gt;</p>');
+});
+
+test('dataFieldValue: a group row keeping extra cells routes to JSON with a renderer note', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [
+      { group: true, cells: [{ text: 'Prescription Drugs' }, { text: 'Retail' }, { text: 'Mail' }] },
+      { cells: [{ text: 'Generic' }, { text: '20%' }, { text: '20%' }] },
+    ],
+  });
+  const out = dataFieldValue(s);
+  assert.equal(out.format, 'json');
+  assert.match(out.reason, /group row/i);
+  const re = fromParsed(ccc.parseData(out.value, s.config));
+  assert.deepEqual(re.rows, s.rows); // extras survive the round-trip
 });

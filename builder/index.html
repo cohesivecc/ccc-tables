@@ -48,9 +48,16 @@
         <button data-act="group" type="button" title="Group rows label a band of rows (e.g. a salary band) and can collapse">Group row</button>
       </div>
       <div class="toolbar_group" aria-label="Columns">
-        <button data-act="add-col" type="button" title="Add a column after the selection">+ Column</button>
+        <button data-act="add-col-left" type="button" title="Add a column before the selection">+ Col ←</button>
+        <button data-act="add-col" type="button" title="Add a column after the selection">+ Col →</button>
         <button data-act="del-col" type="button" title="Delete the selected column">− Column</button>
+        <button data-act="col-left" type="button" title="Move the selected column left">◀</button>
+        <button data-act="col-right" type="button" title="Move the selected column right">▶</button>
         <button data-act="highlight" type="button" title="Tint the selected column (e.g. a recommended plan)">Highlight</button>
+      </div>
+      <div class="toolbar_group" aria-label="History">
+        <button data-act="undo" type="button" title="Undo (⌘Z)">↺ Undo</button>
+        <button data-act="redo" type="button" title="Redo (⇧⌘Z)">↻ Redo</button>
       </div>
       <div class="toolbar_group" aria-label="Cells">
         <button data-act="merge" type="button" title="Merge the selected rectangle of cells (click one corner, shift-click the other)">Merge</button>

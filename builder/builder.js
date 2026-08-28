@@ -61,7 +61,7 @@ function renderGrid() {
         const p = placedRows[r][i];
         const isHead = section === 'header' || row.group || cell.header || p.col === 0;
         const td = document.createElement(isHead ? 'th' : 'td');
-        if (row.group) td.colSpan = cols;
+        if (row.group && row.cells.length === 1) td.colSpan = cols;
         else {
           if (cell.colspan > 1) td.colSpan = cell.colspan;
           if (cell.rowspan > 1) td.rowSpan = cell.rowspan;
@@ -209,6 +209,24 @@ function restoreDraft() {
   } catch (e) { return false; }
 }
 
+/* ---------- undo/redo history ---------- */
+
+const undoStack = [], redoStack = [];
+let historySnapshot = null;
+const serState = () => JSON.stringify(state);
+
+/* Call AFTER a mutation settles: pushes the pre-mutation snapshot. Typing
+   bursts commit once per debounce window, so undo steps stay coarse. */
+function commitHistory() {
+  const now = serState();
+  if (historySnapshot !== null && now !== historySnapshot) {
+    undoStack.push(historySnapshot);
+    if (undoStack.length > 100) undoStack.shift();
+    redoStack.length = 0;
+  }
+  historySnapshot = now;
+}
+
 /* ---------- refresh orchestration ---------- */
 
 function refresh({ grid = true } = {}) {
@@ -216,6 +234,7 @@ function refresh({ grid = true } = {}) {
   syncPanel();
   renderOutputs();
   scheduleSave();
+  commitHistory();
 }
 
 function syncPanel() {
@@ -299,7 +318,7 @@ $('#grid').addEventListener('input', e => {
   if (!c) return;
   M.setCell(state, c.section, c.r, c.cellIdx, e.target.textContent);
   clearTimeout($('#grid')._t);
-  $('#grid')._t = setTimeout(() => { renderOutputs(); scheduleSave(); }, 250);
+  $('#grid')._t = setTimeout(() => { renderOutputs(); scheduleSave(); commitHistory(); }, 250);
 });
 
 /* ---------- toolbar actions ---------- */
@@ -336,6 +355,40 @@ const ACTIONS = {
   'add-col': () => {
     const k = sel ? selRect().c2 : M.colCount(state) - 1;
     M.addColAfter(state, k);
+  },
+  'add-col-left': () => {
+    const k = sel ? selRect().c1 : 0;
+    M.addColAfter(state, k - 1);
+  },
+  'col-left': () => {
+    if (!sel) return status('Select a column first.', 'warn');
+    const k = selRect().c1;
+    if (!M.moveCol(state, k, -1)) {
+      return status('Cannot move: at the edge, or a merged cell crosses that boundary.', 'warn');
+    }
+    sel.anchor[1] = sel.focus[1] = k - 1;
+  },
+  'col-right': () => {
+    if (!sel) return status('Select a column first.', 'warn');
+    const k = selRect().c1;
+    if (!M.moveCol(state, k, 1)) {
+      return status('Cannot move: at the edge, or a merged cell crosses that boundary.', 'warn');
+    }
+    sel.anchor[1] = sel.focus[1] = k + 1;
+  },
+  'undo': () => {
+    if (!undoStack.length) return status('Nothing to undo.', 'warn');
+    redoStack.push(serState());
+    state = JSON.parse(undoStack.pop());
+    historySnapshot = serState();
+    sel = null;
+  },
+  'redo': () => {
+    if (!redoStack.length) return status('Nothing to redo.', 'warn');
+    undoStack.push(serState());
+    state = JSON.parse(redoStack.pop());
+    historySnapshot = serState();
+    sel = null;
   },
   'del-col': () => {
     if (!sel) return status('Select a column first.', 'warn');
@@ -387,7 +440,20 @@ $('#grid-toolbar').addEventListener('click', e => {
   refresh();
 });
 
-/* Token palette: insert at the caret of the focused cell. */
+document.addEventListener('keydown', e => {
+  if (!(e.metaKey || e.ctrlKey)) return;
+  const t = e.target;
+  if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT')) return;
+  const k = e.key.toLowerCase();
+  if (k !== 'z' && k !== 'y') return;
+  e.preventDefault();
+  status('');
+  ACTIONS[(k === 'y' || e.shiftKey) ? 'redo' : 'undo']();
+  refresh();
+});
+
+/* Token palette: insert at the caret of the focused cell; a text SELECTION
+   becomes the link label / tip term instead of being overwritten. */
 document.querySelector('.toolbar-tokens').addEventListener('pointerdown', e => {
   const token = e.target.dataset && e.target.dataset.token;
   if (!token) return;
@@ -396,20 +462,34 @@ document.querySelector('.toolbar-tokens').addEventListener('pointerdown', e => {
   if (!active || !active.classList.contains('cell')) {
     return status('Click into a cell first, then insert a token.', 'warn');
   }
-  document.execCommand('insertText', false, token);
+  let insert = token;
+  const s = getSelection();
+  if (s && !s.isCollapsed && active.contains(s.anchorNode)) {
+    const text = s.toString();
+    if (token.startsWith('[link:')) insert = '[link:https://example.com|' + text + ']';
+    else if (token.startsWith('[tip:')) insert = '[tip:' + text + '|explanation]';
+  }
+  document.execCommand('insertText', false, insert);
 });
 
 /* ---------- side panel events ---------- */
 
-$('#caption').addEventListener('input', e => { state.caption = e.target.value; renderOutputs(); scheduleSave(); });
+let panelTimer;
+function panelTouched() {
+  renderOutputs();
+  scheduleSave();
+  clearTimeout(panelTimer);
+  panelTimer = setTimeout(commitHistory, 400);
+}
+$('#caption').addEventListener('input', e => { state.caption = e.target.value; panelTouched(); });
 $('#footnotes').addEventListener('input', e => {
   state.footnotes = e.target.value.split('\n');
-  renderOutputs(); scheduleSave();
+  panelTouched();
 });
 ['stickyFirstCol', 'collapsibleGroups', 'mobileSwitcher'].forEach(k => {
   $('#cfg-' + k).addEventListener('change', e => {
     if (e.target.checked) state.config[k] = true; else delete state.config[k];
-    renderOutputs(); scheduleSave();
+    renderOutputs(); scheduleSave(); commitHistory();
   });
 });
 

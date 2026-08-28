@@ -57,11 +57,14 @@ function esc(t) {
   return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/* Footnotes field: the LSC-canon <ul> shape for the CMS RichText field. */
+/* Footnotes field: one <p> per line — the same shape the renderer gives
+   inline-array footnotes. No bullet list: real tables mix symbol markers
+   (*, **, †) with plain notes, and the CMS paste kept the <ul> tags as
+   unstyled noise anyway. */
 export function footnotesHTML(state) {
   const lines = (state.footnotes || []).map(l => l.trim()).filter(Boolean);
   if (!lines.length) return '';
-  return '<ul>' + lines.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul>';
+  return lines.map(l => '<p>' + esc(l) + '</p>').join('');
 }
 
 export function captionText(state) {
@@ -97,6 +100,9 @@ export function dataFieldValue(state) {
   }
   if (cells.some(c => (c.text || '') !== (c.text || '').trim())) {
     return json('a cell has spaces the TSV parser would trim');
+  }
+  if (state.rows.some(r => r.group && r.cells.length > 1)) {
+    return json('a group row keeps extra cells (renderer ≥ 0.3 renders them)');
   }
   if (!(state.config && state.config.tsvGroups === false)) {
     const misdetected = state.rows.some(r => !r.group &&
