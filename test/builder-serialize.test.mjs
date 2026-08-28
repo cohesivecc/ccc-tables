@@ -304,3 +304,25 @@ test('dataFieldValue: a group row keeping extra cells routes to JSON with a rend
   const re = fromParsed(ccc.parseData(out.value, s.config));
   assert.deepEqual(re.rows, s.rows); // extras survive the round-trip
 });
+
+// ---------- switcherInert: mirrors the renderer's mobile-switcher guard ----------
+
+const { switcherInert } = ser;
+
+test('switcherInert: true when body rows (or multi-cell group rows) carry spans', () => {
+  const plain = fromParsed({ columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [{ cells: [{ text: 'x' }, { text: '1' }, { text: '2' }] }] });
+  assert.equal(switcherInert(plain), false);
+  const spanned = fromParsed({ columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [{ cells: [{ text: 'x' }, { text: 'wide', colspan: 2 }] }] });
+  assert.equal(switcherInert(spanned), true);
+  const labelGroup = fromParsed({ columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [
+      { group: true, cells: [{ text: 'Band' }] },
+      { cells: [{ text: 'x' }, { text: '1' }, { text: '2' }] },
+    ] });
+  assert.equal(switcherInert(labelGroup), false); // label-only group rows don't block
+  const cellGroup = fromParsed({ columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [{ group: true, cells: [{ text: 'Rx' }, { text: 'Retail', colspan: 2 }] }] });
+  assert.equal(switcherInert(cellGroup), true);
+});

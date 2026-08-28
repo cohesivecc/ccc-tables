@@ -262,6 +262,15 @@ function syncPanel() {
   ['stickyFirstCol', 'collapsibleGroups', 'mobileSwitcher'].forEach(k => {
     $('#cfg-' + k).checked = state.config[k] === true;
   });
+  // The renderer disables the plan switcher on tables with merged body cells —
+  // gray the checkbox out and say why, instead of letting it silently no-op.
+  const inert = S.switcherInert(state);
+  const cb = $('#cfg-mobileSwitcher');
+  cb.disabled = inert;
+  $('#switcher-note').hidden = !inert;
+  $('#cfg-mobileSwitcher-label').title = inert
+    ? 'The renderer turns the mobile plan switcher off when body rows contain merged cells — it can\u2019t show or hide part of a span. Unmerge the cells to enable it.'
+    : '';
 }
 
 /* ---------- import ---------- */

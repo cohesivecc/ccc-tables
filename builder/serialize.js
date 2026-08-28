@@ -173,6 +173,16 @@ export function gridToParsed(grid) {
   return { columns, rows };
 }
 
+/* Mirrors the renderer's mobile-switcher guard: the switcher is inert when
+   body rows (or group rows keeping extra cells) contain merged cells — it
+   can't show/hide part of a span. */
+export function switcherInert(state) {
+  return state.rows.some(r => {
+    if (r.group && r.cells.length < 2) return false;
+    return r.cells.some(c => c.colspan > 1 || c.rowspan > 1);
+  });
+}
+
 /* Errors: the emitted Data string must survive the real parser.
    Warnings: non-group rows whose resolved width ≠ the header width
    (the row-span validation practice used on the LSC payloads). */
