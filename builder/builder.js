@@ -111,10 +111,14 @@ function renderOutputs() {
   const caption = S.captionText(state);
   const foot = S.footnotesHTML(state);
   const config = S.configJSON(state);
+  // Footnotes: the HTML flavor pastes as formatted paragraphs; the PLAIN
+  // flavor is the bare lines — so a plain-text paste into the Webflow
+  // RichText field still becomes clean paragraphs, never literal tags.
+  const footLines = (state.footnotes || []).map(l => l.trim()).filter(Boolean).join('\n');
   copyables = {
     'out-data': { value: data.value, ok: !v.errors.length },
-    'out-caption': { value: caption, ok: true, plain: true },
-    'out-footnotes': { value: foot, ok: true, html: true },
+    'out-caption': { value: caption, ok: true },
+    'out-footnotes': { value: foot, plainAlt: footLines, ok: true, html: true },
     'out-config': { value: config, ok: true },
   };
   const set = (id, text, statusText, err) => {
@@ -511,21 +515,22 @@ function legacyCopy(text) {
 document.querySelectorAll('.out .copy').forEach(btn => {
   btn.addEventListener('click', async () => {
     const box = btn.closest('.out');
-    const { value, html } = copyables[box.id] || {};
+    const { value, html, plainAlt } = copyables[box.id] || {};
     if (!value) return;
+    const plain = plainAlt || value;
     let ok = false;
     try {
       if (html && window.ClipboardItem) {
         await navigator.clipboard.write([new ClipboardItem({
           'text/html': new Blob([value], { type: 'text/html' }),
-          'text/plain': new Blob([value], { type: 'text/plain' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
         })]);
       } else {
-        await navigator.clipboard.writeText(value);
+        await navigator.clipboard.writeText(plain);
       }
       ok = true;
     } catch (e) {
-      ok = legacyCopy(value);
+      ok = legacyCopy(plain);
     }
     if (ok) {
       btn.textContent = 'Copied ✓';
