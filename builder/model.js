@@ -112,7 +112,11 @@ export function toggleGroup(state, r) {
   if (!row) return state;
   if (row.group) {
     delete row.group;
-    while (row.cells.length < colCount(state)) row.cells.push({ text: '' });
+    // pad to the grid width by RESOLVED width — a group row that kept
+    // spanning cells already covers more columns than it has cells
+    const width = () =>
+      ccc().resolveGrid([row])[0].reduce((m, p) => Math.max(m, p.col + p.span), 0);
+    while (width() < colCount(state)) row.cells.push({ text: '' });
   } else {
     row.group = true;
     // Keep the row's data — renderer ≥ 0.3 renders a group row's extra cells;

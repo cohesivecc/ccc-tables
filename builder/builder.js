@@ -13,6 +13,7 @@ const ccc = window.cccTables;
 const $ = sel => document.querySelector(sel);
 
 const DRAFT_KEY = 'ccc-builder-draft';
+const VERSION_KEY = 'ccc-builder-version';
 const JSDELIVR_META = 'https://data.jsdelivr.com/v1/packages/gh/cohesivecc/ccc-tables';
 const JSDELIVR_FILE = v => `https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@${v}`;
 
@@ -181,11 +182,25 @@ ${config ? `<script type="application/json" data-ccc-table-config="builder-previ
 </body></html>`;
 }
 
+/* True when the selected preview renderer predates a feature the current
+   table depends on (group rows keeping extra cells → renderer ≥ 0.3). */
+function previewNote(version) {
+  const needs03 = state.rows.some(r => r.group && r.cells.length > 1);
+  if (!needs03 || version === 'local') return '';
+  const [maj, min] = version.split('.').map(Number);
+  if (maj > 0 || min >= 3) return '';
+  return 'This table uses group rows that keep extra cells — renderer ≥ 0.3 required. ' +
+    'The selected ' + version + ' preview shows only the group label (and so will a site ' +
+    'pinned to it). Pick “local checkout” to preview the 0.3 behavior.';
+}
+
 let previewTimer;
 function schedulePreview() {
   clearTimeout(previewTimer);
   previewTimer = setTimeout(() => {
-    $('#preview').srcdoc = previewSrcdoc($('#version').value || 'local');
+    const version = $('#version').value || 'local';
+    $('#preview').srcdoc = previewSrcdoc(version);
+    $('#preview-note').textContent = previewNote(version);
   }, 300);
 }
 
@@ -606,7 +621,16 @@ async function loadVersions() {
     select.appendChild(local);
     select.value = 'local';
   }
-  select.addEventListener('change', schedulePreview);
+  try {
+    const remembered = localStorage.getItem(VERSION_KEY);
+    if (remembered && [...select.options].some(o => o.value === remembered)) {
+      select.value = remembered;
+    }
+  } catch (e) { /* storage unavailable */ }
+  select.addEventListener('change', () => {
+    try { localStorage.setItem(VERSION_KEY, select.value); } catch (e) { /* ignore */ }
+    schedulePreview();
+  });
   schedulePreview();
 }
 

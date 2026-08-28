@@ -253,3 +253,19 @@ test('moveCol: refuses when a span crosses the boundary', () => {
   assert.equal(moveCol(s, 0, 1), false);
   assert.equal(moveCol(s, 1, 1), false); // 'wide' covers col 1; boundary 1|2 touches it
 });
+
+test('toggleGroup: ungrouping a span-carrying group row pads by RESOLVED width', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: '' }, { text: 'T1' }, { text: 'T2' }, { text: 'T3' }, { text: 'OON' }],
+    rows: [{ group: true, cells: [
+      { text: 'Prescription Drugs', colspan: 2 },
+      { text: 'Retail', colspan: 2 },
+      { text: 'Mail', colspan: 2 },
+    ] }],
+  });
+  toggleGroup(s, 0); // 3 cells already cover all 6 grid columns — no pads
+  assert.ok(!s.rows[0].group);
+  assert.equal(s.rows[0].cells.length, 3);
+  toggleGroup(s, 0); // and back, still intact
+  assert.deepEqual(s.rows[0].cells.map(c => c.text), ['Prescription Drugs', 'Retail', 'Mail']);
+});
