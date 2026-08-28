@@ -23,6 +23,23 @@ embed), pinned to a release tag:
 
 jsDelivr serves `.min.js`/`.min.css` automatically — no build step in this repo.
 
+## Styling: what the stylesheet owns vs the Designer
+
+`ccc-tables.css` splits into two kinds of rules (see its header comment):
+
+- **Mechanics** (sticky positioning, column hiding, the mobile-switcher media
+  block, category-colored header/legend treatments) keep normal specificity.
+  Their colors are themable via custom properties, never by re-declaring rules:
+  `--ccc-cat-700/500/100` (category bridge), `--ccc-cat-on-dark`,
+  `--ccc-table-bg`, `--ccc-ok`, `--ccc-danger` — set them as Webflow Variables
+  or on any ancestor. The two `!important`s are load-bearing and stay.
+- **Skin** on renderer-minted classes (`.ccc-table_caption`, `_chip`,
+  `_footnotes`, `_link`, `_tip`, `.ccc-ico` colors, `_error`) is wrapped in
+  `:where(...)` — zero specificity, so ANY Designer-authored rule on the same
+  class wins regardless of stylesheet order. To restyle visually in Webflow:
+  put dummy elements carrying these classes on a `/system` swatch page, style
+  them in the Designer panel, done — no `!important`, no head-code overrides.
+
 Requirements on the host site:
 
 - The CCC starter's `table_*` class family (`table_component`, `table_header`,
@@ -97,6 +114,15 @@ header cells with their spans, so a collapsible band can head sub-columns:
 
 Renderers before 0.3 show only the label.
 
+**Mobile plan switcher on merged tables (v0.4+):** `mobileSwitcher` is span-aware —
+a merged cell stays visible whenever the selected column falls inside its span, so
+spanned comparison tables keep the switcher (renderers before 0.4 turn it off when
+body rows contain merges). Cells flagged `"header": true` (and the first column)
+always show — flag sub-label cells like "Employee Only" so they survive the
+single-column view. Blank header cells produce no switcher chip. Caveat: a
+`rowspan` value renders once, on its origin row — covered rows show no value for
+that column.
+
 ### Split-field overlay
 
 Caption, footnotes, and config can live in their own CMS fields instead of the
@@ -153,8 +179,9 @@ The builder tool consumes these so its preview IS the production renderer.
 
 `builder/` is a standalone static page for Marketer-seat contributors: paste a
 range copied from Excel/Google Sheets (or an existing `Data` field), click-
-configure it (group rows, cell merges, multi-row headers, highlight column,
-token palette, caption/footnotes/options), and copy the four CMS field values —
+configure it (group rows, cell merges, multi-row headers, header-cell flags,
+highlight column, token palette, caption/footnotes/options, undo/redo), and copy
+the four CMS field values —
 **Data** (TSV when round-trip-safe, else JSON with a stated reason), **Caption**,
 **Footnotes** (pastes as rich text), **Config**. The preview pane loads the
 pinned jsDelivr build of this renderer (release-tag picker, mobile width

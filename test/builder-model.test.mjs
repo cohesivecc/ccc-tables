@@ -269,3 +269,21 @@ test('toggleGroup: ungrouping a span-carrying group row pads by RESOLVED width',
   toggleGroup(s, 0); // and back, still intact
   assert.deepEqual(s.rows[0].cells.map(c => c.text), ['Prescription Drugs', 'Retail', 'Mail']);
 });
+
+test('toggleHeaderCells: flags/unflags body cells in a grid rect, skips group rows', () => {
+  const s = fromParsed({
+    columns: [{ text: '' }, { text: 'A' }, { text: 'B' }],
+    rows: [
+      { group: true, cells: [{ text: 'Band' }] },
+      { cells: [{ text: 'x' }, { text: 'sub', colspan: 2 }] },
+      { cells: [{ text: 'y' }, { text: '1' }, { text: '2' }] },
+    ],
+  });
+  assert.equal(model.toggleHeaderCells(s, { r1: 1, r2: 2, c1: 1, c2: 1 }), true);
+  assert.equal(s.rows[1].cells[1].header, true); // span intersecting col 1
+  assert.equal(s.rows[2].cells[1].header, true);
+  assert.ok(!s.rows[2].cells[2].header);         // col 2 outside the rect
+  assert.ok(!s.rows[0].cells[0].header);         // group row skipped
+  model.toggleHeaderCells(s, { r1: 1, r2: 2, c1: 1, c2: 1 });
+  assert.ok(!s.rows[1].cells[1].header && !s.rows[2].cells[1].header); // all flagged → unflag
+});

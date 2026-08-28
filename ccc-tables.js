@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.3.0 — CMS-data-driven table renderer (Cohesive CCC starter)
+ * ccc-tables v0.4.0 — CMS-data-driven table renderer (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Renders semantic table markup from data blobs in the DOM:
@@ -18,7 +18,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '0.3.0';
+  var VERSION = '0.4.0';
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -183,18 +183,18 @@
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
-    var hasBodySpans = (data.rows || []).some(function (r) {
-      if (r.group && (r.cells || []).length < 2) return false;
-      return (r.cells || []).some(function (c) { return (c.colspan || 1) > 1 || (c.rowspan || 1) > 1; });
-    });
     var lastHead = resolveGrid(headRows)[headRows.length - 1] || [];
     var colCount = lastHead.reduce(function (m, p) { return Math.max(m, p.col + p.span); }, 0);
-    if (cfg.mobileSwitcher && !hasBodySpans && colCount > 2) {
+    if (cfg.mobileSwitcher && colCount > 2) {
+      /* v0.4: span-aware — a merged cell stays visible whenever the selected
+         column falls inside its span, so spanned tables keep the switcher.
+         Header-flagged label cells (is-row-header) always show. */
       var setCol = function (col) {
         table.querySelectorAll('th[data-col], td[data-col]').forEach(function (c) {
-          var cc = c.getAttribute('data-col');
-          if (cc === '0') return;
-          if (cc === String(col)) c.removeAttribute('data-ccc-colhide');
+          var cc = +c.getAttribute('data-col');
+          if (cc === 0 || c.classList.contains('is-row-header')) return;
+          var span = c.colSpan || 1;
+          if (cc <= col && col < cc + span) c.removeAttribute('data-ccc-colhide');
           else c.setAttribute('data-ccc-colhide', '');
         });
         outer.setAttribute('ccc-show-col', col);
@@ -202,6 +202,7 @@
       var chips = el('div', 'ccc-table_chips');
       lastHead.forEach(function (p) {
         if (p.col === 0) return;
+        if (!String(p.cell.text || '').trim()) return;   /* blank header cell → no chip */
         var chip = el('button', 'ccc-table_chip', p.cell.text);
         chip.type = 'button';
         chip.setAttribute('data-col', p.col);

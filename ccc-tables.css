@@ -1,25 +1,43 @@
 /*!
- * ccc-tables v0.2.2 — renderer styles (Cohesive CCC starter)
+ * ccc-tables v0.4.0 — renderer styles (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Base table typography/borders come from the CCC starter's `table_*` class
  * family (table_component / table_header / table_cell / table_row); this sheet
- * carries only the renderer-generated `ccc-table_*` layer. Category theming
- * reads the `--ccc-cat-*` bridge custom properties from any ancestor
- * ([benefit-category] pages, u-cat-* painters); the fallbacks below are the
- * neutral demo palette.
+ * carries only the renderer-generated `ccc-table_*` layer.
+ *
+ * TWO KINDS OF RULES, deliberately:
+ *
+ * 1. MECHANICS + table_*-family overrides — normal specificity. Sticky
+ *    positioning, column hiding, the mobile switcher media block, and the
+ *    category-colored header/legend/sticky treatments that must beat the
+ *    starter's own .table_* rules. Their COLORS are themable via custom
+ *    properties, never by re-declaring the rule:
+ *      --ccc-cat-700 / --ccc-cat-500 / --ccc-cat-100   category bridge (from
+ *          any ancestor: [benefit-category] pages, u-cat-* painters)
+ *      --ccc-cat-on-dark   ink on cat-700 surfaces        (default #fff)
+ *      --ccc-table-bg      sticky-cell opaque background  (default #fff)
+ *      --ccc-ok / --ccc-danger   [check]/[xmark] + error  (defaults below)
+ *    Set these as Webflow Variables (or any ancestor style) per site.
+ *
+ * 2. SKIN on renderer-minted classes — wrapped in :where(...) so they have
+ *    ZERO specificity: any Designer-authored rule on the same class
+ *    (.ccc-table_footnotes, .ccc-table_chip, …) wins regardless of
+ *    stylesheet order. These are shipped defaults, not decisions.
  */
 
+/* ---------- mechanics + starter-family overrides ---------- */
+
 .ccc-table_scroll { overflow-x: auto; overscroll-behavior-x: contain; max-height: 70vh; overflow-y: auto; }
-.ccc-table_caption { caption-side: top; text-align: left; font-weight: 600; padding-bottom: .5em; }
-.ccc-table thead .table_header { position: sticky; top: 0; z-index: 2; background-color: var(--ccc-cat-700, #1f3d38); color: #fff; border-color: color-mix(in oklab, #fff 25%, var(--ccc-cat-700, #1f3d38)); }
+.ccc-table thead .table_header { position: sticky; top: 0; z-index: 2; background-color: var(--ccc-cat-700, #1f3d38); color: var(--ccc-cat-on-dark, #fff); border-color: color-mix(in oklab, #fff 25%, var(--ccc-cat-700, #1f3d38)); }
 .ccc-table thead .table_row:nth-child(2) .table_header { top: 2.6em; }
 .ccc-table .table_row.is-legend-row .table_header { background-color: var(--ccc-cat-100, #e9f1ee); color: var(--ccc-cat-700, #1f3d38); }
 
-[ccc-sticky-first] .table_header.is-row-header, [ccc-sticky-first] td[data-col="0"] { position: sticky; left: 0; z-index: 1; background-color: #fff; box-shadow: 6px 0 8px -6px rgba(0,0,0,.15); }
+[ccc-sticky-first] .table_header.is-row-header, [ccc-sticky-first] td[data-col="0"] { position: sticky; left: 0; z-index: 1; background-color: var(--ccc-table-bg, #fff); box-shadow: 6px 0 8px -6px rgba(0,0,0,.15); }
 [ccc-sticky-first] thead .table_header.is-row-header { z-index: 3; background-color: var(--ccc-cat-700, #1f3d38); }
-[ccc-sticky-first] tbody .table_header.is-row-header { background-color: #fff; }
+[ccc-sticky-first] tbody .table_header.is-row-header { background-color: var(--ccc-table-bg, #fff); }
 
+/* !important: must beat the opaque sticky-cell background above. */
 .ccc-table_highlight { background-color: var(--ccc-cat-100, #e9f1ee) !important; }
 
 .ccc-table_group-toggle { all: unset; cursor: pointer; display: flex; justify-content: space-between; align-items: center; width: 100%; font: inherit; }
@@ -28,31 +46,38 @@
 .ccc-table_group-chevron { transition: transform .15s ease; }
 
 .ccc-table_toolbar { display: none; margin-bottom: .5rem; }
-.ccc-table_chips { display: flex; gap: .4rem; flex-wrap: wrap; }
-.ccc-table_chip { display: inline-block; border: 1px solid var(--ccc-cat-500, #2f6e63); color: var(--ccc-cat-700, #1f3d38); background: transparent; border-radius: 99px; padding: .3em .95em; font-size: .85rem; line-height: 1.4; cursor: pointer; text-decoration: none; }
-.ccc-table_chip.is-active { background: var(--ccc-cat-500, #2f6e63); color: #fff; }
+
+/* ---------- skin (zero specificity — restyle these classes in Designer) ---------- */
+
+:where(.ccc-table_caption) { caption-side: top; text-align: left; font-weight: 600; padding-bottom: .5em; }
+:where(.ccc-table_chips) { display: flex; gap: .4rem; flex-wrap: wrap; }
+:where(.ccc-table_chip) { display: inline-block; border: 1px solid var(--ccc-cat-500, #2f6e63); color: var(--ccc-cat-700, #1f3d38); background: transparent; border-radius: 99px; padding: .3em .95em; font-size: .85rem; line-height: 1.4; cursor: pointer; text-decoration: none; }
+:where(.ccc-table_chip.is-active) { background: var(--ccc-cat-500, #2f6e63); color: var(--ccc-cat-on-dark, #fff); }
 /* Footnotes render as an attached footer row: full width, continuing the table
    frame (side + bottom borders in the table's own Row/border token). The block
    sits BELOW the scroll wrapper on purpose — a real tfoot would scroll
    horizontally with wide tables and hide inside the max-height scroll region. */
-.ccc-table_footnotes { font-size: .78rem; padding: .7em 1em .55em; border-style: none solid solid; border-width: 0 1px 1px; border-color: var(--_table-row-styles---row--border, #d8dde2); }
-.ccc-table_footnotes p { margin: 0 0 .35em; opacity: .72; }
-.ccc-table_error { border: 1px dashed #b03a2e; color: #b03a2e; padding: .75em 1em; border-radius: .4em; font-size: .9rem; }
+:where(.ccc-table_footnotes) { font-size: .78rem; padding: .7em 1em .55em; border-style: none solid solid; border-width: 0 1px 1px; border-color: var(--_table-row-styles---row--border, #d8dde2); }
+:where(.ccc-table_footnotes p) { margin: 0 0 .35em; opacity: .72; }
+:where(.ccc-table_error) { border: 1px dashed var(--ccc-danger, #b03a2e); color: var(--ccc-danger, #b03a2e); padding: .75em 1em; border-radius: .4em; font-size: .9rem; }
 
 /* cell tokens */
-.ccc-table_link { color: var(--ccc-cat-500, #2f6e63); text-decoration: underline; text-underline-offset: .15em; }
-.ccc-table_link:hover { color: var(--ccc-cat-700, #1f3d38); }
-.ccc-table_tip { text-decoration: underline dotted; text-underline-offset: .2em; cursor: help; }
-.ccc-ico { font-weight: 700; }
-.ccc-ico.is-check::before { content: "\2713"; color: #2e7d32; }
-.ccc-ico.is-xmark::before { content: "\2715"; color: #b03a2e; }
-.ccc-ico.is-dollar::before { content: "$"; color: var(--ccc-cat-500, #2f6e63); }
-.ccc-table sup { font-size: .65em; }
+:where(.ccc-table_link) { color: var(--ccc-cat-500, #2f6e63); text-decoration: underline; text-underline-offset: .15em; }
+:where(.ccc-table_link:hover) { color: var(--ccc-cat-700, #1f3d38); }
+:where(.ccc-table_tip) { text-decoration: underline dotted; text-underline-offset: .2em; cursor: help; }
+:where(.ccc-ico) { font-weight: 700; }
+:where(.ccc-ico.is-check)::before { content: "\2713"; color: var(--ccc-ok, #2e7d32); }
+:where(.ccc-ico.is-xmark)::before { content: "\2715"; color: var(--ccc-danger, #b03a2e); }
+:where(.ccc-ico.is-dollar)::before { content: "$"; color: var(--ccc-cat-500, #2f6e63); }
+:where(.ccc-table) sup { font-size: .65em; }
+
+/* ---------- mobile switcher (mechanics) ---------- */
 
 @media (max-width: 767px) {
   [ccc-mobile-switcher] .ccc-table_toolbar { display: block; }
   [ccc-mobile-switcher] [data-ccc-colhide] { display: none; }
   [ccc-mobile-switcher] thead { display: none; }
+  /* !important: must beat the starter's own mobile grid rule. */
   [ccc-mobile-switcher] .table_row { grid-template-columns: 1fr !important; }
   [ccc-mobile-switcher] .table_cell { text-align: left; }
   [ccc-mobile-switcher] tbody .table_header.is-row-header { border-bottom: none; padding-bottom: .25em; }

@@ -185,13 +185,20 @@ ${config ? `<script type="application/json" data-ccc-table-config="builder-previ
 /* True when the selected preview renderer predates a feature the current
    table depends on (group rows keeping extra cells → renderer ≥ 0.3). */
 function previewNote(version) {
-  const needs03 = state.rows.some(r => r.group && r.cells.length > 1);
-  if (!needs03 || version === 'local') return '';
+  if (version === 'local') return '';
   const [maj, min] = version.split('.').map(Number);
-  if (maj > 0 || min >= 3) return '';
-  return 'This table uses group rows that keep extra cells — renderer ≥ 0.3 required. ' +
-    'The selected ' + version + ' preview shows only the group label (and so will a site ' +
-    'pinned to it). Pick “local checkout” to preview the 0.3 behavior.';
+  const atLeast = v => maj > 0 || min >= v;
+  const notes = [];
+  if (state.rows.some(r => r.group && r.cells.length > 1) && !atLeast(3)) {
+    notes.push('group rows that keep extra cells need renderer ≥ 0.3 (this ' + version +
+      ' preview — and any site pinned to it — shows only the group label)');
+  }
+  if (S.switcherInert(state) && state.config.mobileSwitcher === true && !atLeast(4)) {
+    notes.push('the mobile plan switcher on merged-cell tables needs renderer ≥ 0.4 (' +
+      version + ' turns it off)');
+  }
+  if (!notes.length) return '';
+  return 'Heads up: ' + notes.join('; ') + '. Pick “local checkout” to preview the newest behavior.';
 }
 
 let previewTimer;
@@ -262,14 +269,12 @@ function syncPanel() {
   ['stickyFirstCol', 'collapsibleGroups', 'mobileSwitcher'].forEach(k => {
     $('#cfg-' + k).checked = state.config[k] === true;
   });
-  // The renderer disables the plan switcher on tables with merged body cells —
-  // gray the checkbox out and say why, instead of letting it silently no-op.
-  const inert = S.switcherInert(state);
-  const cb = $('#cfg-mobileSwitcher');
-  cb.disabled = inert;
-  $('#switcher-note').hidden = !inert;
-  $('#cfg-mobileSwitcher-label').title = inert
-    ? 'The renderer turns the mobile plan switcher off when body rows contain merged cells — it can\u2019t show or hide part of a span. Unmerge the cells to enable it.'
+  // Renderer ≥ 0.4 supports the switcher on merged-cell tables (span-aware);
+  // older renderers silently turn it off — say so instead of hard-disabling.
+  const spanned = S.switcherInert(state);
+  $('#switcher-note').hidden = !spanned;
+  $('#cfg-mobileSwitcher-label').title = spanned
+    ? 'This table has merged cells: the mobile switcher works on renderer \u2265 0.4 (a merged cell shows whenever the selected column falls inside its span). Renderers before 0.4 turn the switcher off on merged tables.'
     : '';
 }
 
@@ -429,6 +434,10 @@ const ACTIONS = {
     const k = selRect().c1;
     state.config.highlightCol = state.config.highlightCol === k ? undefined : k;
     if (state.config.highlightCol === undefined) delete state.config.highlightCol;
+  },
+  'header-cell': () => {
+    if (!sel || sel.section !== 'body') return status('Select body cells first.', 'warn');
+    if (!M.toggleHeaderCells(state, selRect())) return status('No cells to flag in that selection.', 'warn');
   },
   'merge': () => {
     if (!sel) return status('Click one corner, shift-click the other, then Merge.', 'warn');

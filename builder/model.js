@@ -296,6 +296,25 @@ export function unmergeCell(state, section, r, cIdx) {
   return true;
 }
 
+/* Flag/unflag body cells as header cells (rendered <th>; always visible in
+   the v0.4 mobile switcher — e.g. "Employee Only" sub-labels). Acts on every
+   non-group body cell intersecting the grid rect; if any hit is unflagged,
+   all become flagged, else all unflag. */
+export function toggleHeaderCells(state, rect) {
+  const { placedRows } = occupancy(state.rows);
+  const hits = [];
+  state.rows.forEach((row, r) => {
+    if (row.group || r < rect.r1 || r > rect.r2) return;
+    placedRows[r].forEach(p => {
+      if (p.col <= rect.c2 && p.col + p.span - 1 >= rect.c1) hits.push(p.cell);
+    });
+  });
+  if (!hits.length) return false;
+  const on = hits.some(c => !c.header);
+  hits.forEach(c => { if (on) c.header = true; else delete c.header; });
+  return true;
+}
+
 /* Multi-row headers: move the first body row up / the last header row down. */
 export function promoteRowToHeader(state) {
   const row = state.rows[0];
