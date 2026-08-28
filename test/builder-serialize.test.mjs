@@ -226,3 +226,58 @@ test('fixture: 2-row spanned header (demo shape) → JSON, multi-row header reas
   assert.equal(out.format, 'json');
   assert.match(out.reason, /multi-row header/);
 });
+
+// ---------- Excel-clipboard import (quoted multiline fields) ----------
+
+const { parseExcelClipboard, gridToParsed } = ser;
+
+test('parseExcelClipboard: plain TSV matches parseTSV cell-for-cell', () => {
+  const src = '\tA\tB\nIn-network\nDeductible\t $1,500 \t$500';
+  const grid = parseExcelClipboard(src);
+  const viaRenderer = ccc.parseTSV(src);
+  assert.deepEqual(grid[0], viaRenderer.columns.map(c => c.text));
+  assert.deepEqual(grid[2], ['Deductible', '$1,500', '$500']); // trimmed like parseTSV
+});
+
+test('parseExcelClipboard: a quoted field keeps its embedded newline as ONE cell', () => {
+  const src = 'Label\tValue\n"Out-of-Pocket Maximum (OOP)***\n(Medical & Rx combined)"\t$6,500';
+  const grid = parseExcelClipboard(src);
+  assert.equal(grid.length, 2);
+  assert.equal(grid[1][0], 'Out-of-Pocket Maximum (OOP)***\n(Medical & Rx combined)');
+  assert.equal(grid[1][1], '$6,500');
+});
+
+test('parseExcelClipboard: "" escapes a literal quote; quotes mid-field stay literal', () => {
+  const grid = parseExcelClipboard('A\tB\n"say ""hi"""\t5"6');
+  assert.equal(grid[1][0], 'say "hi"');
+  assert.equal(grid[1][1], '5"6');
+});
+
+test('parseExcelClipboard: all-empty rows and trailing empty columns are dropped', () => {
+  const grid = parseExcelClipboard('A\tB\t\nx\ty\t\n\t\t\nz\tw\t');
+  assert.deepEqual(grid, [['A', 'B'], ['x', 'y'], ['z', 'w']]);
+});
+
+test('gridToParsed: group heuristic matches parseTSV', () => {
+  const src = 'Plan\tA\tB\nIn-network\t\t\nDeductible\t$1\t$2';
+  const ours = gridToParsed(parseExcelClipboard(src));
+  const theirs = ccc.parseTSV(src);
+  assert.deepEqual(ours, theirs);
+});
+
+test('excel paste with merged cells + multiline labels imports whole and routes to JSON', () => {
+  // Synthetic mirror of the Easify Edge comparison paste (quotes, merge remnants)
+  const src = '\t\tPlan X\t\t\t\n\t\tTier 1\tTier 2\tTier 3\tOut-of-Network\n' +
+    'Annual Deductible\t\t$0 \t\t\t\n' +
+    '"Out-of-Pocket Maximum***\n(Medical & Rx combined)"\t Employee Only\t$6,500 \t\t\tN/A\n' +
+    '\tEmployee + Dependent(s)\t$13,000 \t\t\t';
+  const s = fromParsed(gridToParsed(parseExcelClipboard(src)));
+  assert.equal(s.rows.length, 4); // no shattered fragment rows
+  assert.equal(s.rows[2].cells[0].text, 'Out-of-Pocket Maximum***\n(Medical & Rx combined)');
+  assert.ok(!s.rows.some(r => r.group)); // no false group rows
+  const out = dataFieldValue(s);
+  assert.equal(out.format, 'json');
+  assert.match(out.reason, /line break/i);
+  const re = fromParsed(ccc.parseData(out.value, s.config));
+  assert.deepEqual(re.rows, s.rows);
+});

@@ -231,7 +231,13 @@ function syncPanel() {
 function importData(text) {
   const st = $('#import-status');
   try {
-    const parsed = ccc.parseData(text);
+    const sniff = String(text || '').trim();
+    if (!sniff) throw new Error('empty data');
+    // JSON blobs go through the real parser; pasted ranges go through the
+    // Excel-clipboard parser (quoted multiline cells arrive as ONE cell).
+    const parsed = sniff.charAt(0) === '{'
+      ? ccc.parseData(sniff)
+      : S.gridToParsed(S.parseExcelClipboard(text));
     state = M.fromParsed(parsed);
     sel = null;
     st.textContent = 'Imported.';

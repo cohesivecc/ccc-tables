@@ -113,6 +113,60 @@ export function dataFieldValue(state) {
   return json('not round-trip-safe as TSV');
 }
 
+/* Excel/Sheets CLIPBOARD parser for the builder's import path. Unlike the
+ * renderer's parseTSV (which the CMS Data field uses and which has no quote
+ * handling), a spreadsheet clipboard wraps any cell containing a newline,
+ * tab, or quote in double quotes ("" escapes a literal quote). Without this,
+ * a multiline cell shatters into extra rows and the fragments get mistaken
+ * for group rows. Returns a grid of trimmed strings; all-empty rows and
+ * trailing all-empty columns are dropped.
+ */
+export function parseExcelClipboard(text) {
+  const t = String(text).replace(/\r\n?/g, '\n');
+  const rows = [[]];
+  let field = '', quoted = false, fieldStart = true;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (fieldStart && ch === '"') { quoted = true; fieldStart = false; continue; }
+    if (quoted) {
+      if (ch === '"') {
+        if (t[i + 1] === '"') { field += '"'; i++; } else quoted = false;
+      } else field += ch;
+      continue;
+    }
+    fieldStart = false;
+    if (ch === '\t') { rows[rows.length - 1].push(field); field = ''; fieldStart = true; }
+    else if (ch === '\n') { rows[rows.length - 1].push(field); field = ''; fieldStart = true; rows.push([]); }
+    else field += ch;
+  }
+  rows[rows.length - 1].push(field);
+  let grid = rows.map(r => r.map(c => c.trim()))
+    .filter(r => r.some(c => c !== ''));
+  let width = grid.reduce((m, r) => Math.max(m, r.length), 0);
+  while (width > 0 && grid.every(r => (r[width - 1] || '') === '')) {
+    grid.forEach(r => { if (r.length >= width) r.length = width - 1; });
+    width--;
+  }
+  return grid;
+}
+
+/* Grid of strings → the renderer's {columns, rows} shape, with the SAME
+   group-row heuristic as parseTSV (first line header; a body row with only
+   its first cell filled becomes a group row). */
+export function gridToParsed(grid) {
+  if (!grid.length) throw new Error('empty data');
+  const columns = grid[0].map(t => ({ text: t }));
+  const colCount = columns.length;
+  const rows = grid.slice(1).map(cells => {
+    const isGroup = colCount > 1 && cells[0] !== '' &&
+      cells.slice(1).every(c => c === '');
+    const row = { cells: (isGroup ? [cells[0]] : cells).map(t => ({ text: t })) };
+    if (isGroup) row.group = true;
+    return row;
+  });
+  return { columns, rows };
+}
+
 /* Errors: the emitted Data string must survive the real parser.
    Warnings: non-group rows whose resolved width ≠ the header width
    (the row-span validation practice used on the LSC payloads). */

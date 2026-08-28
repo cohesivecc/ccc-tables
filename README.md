@@ -155,6 +155,12 @@ Hosted via GitHub Pages (Settings → Pages → Deploy from branch → `master`,
 `/ (root)`): `https://cohesivecc.github.io/ccc-tables/builder/`. Cell richness
 is tokens-only by design — the builder never inserts site components.
 
+Caution shared with Tier-1 pastes: a spreadsheet cell containing a LINE BREAK is
+quoted by Excel/Sheets on copy; the builder's import handles that quoting, but the
+renderer's own `parseTSV` (a direct CMS `Data` paste) does not — multiline cells
+must go through the builder (which emits JSON for them). Renderer quote-handling is
+a v0.3 candidate.
+
 Develop: serve the repo root over HTTP (ES modules don't load from `file://`),
 e.g. `python3 -m http.server`, then open `/builder/`. Logic tests:
 `node --test test/builder-*.test.mjs`.
