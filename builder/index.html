@@ -77,7 +77,8 @@
       <button data-token="[dollar]" type="button" title="A dollar icon">$ dollar</button>
       <button data-token="[link:https://example.com|label]" type="button" title="A link — edit the url and label">link</button>
       <button data-token="[tip:term|explanation]" type="button" title="A hover tooltip — edit the term and explanation">tip</button>
-      <button data-token="^1" type="button" title="A footnote marker — superscript number matching a footnote line">^1 footnote</button>
+      <button data-token="[reg:regular-weight text]" type="button" title="Regular weight — de-emphasize part of a bold first-column label (e.g. a parenthetical). Select text first to wrap it.">reg</button>
+      <button data-token="^1" type="button" title="A footnote marker — superscript, matching a footnote line. Use a number (^1) or a symbol: ^* ^** ^*** ^† ^‡ ^§">^1 footnote</button>
     </div>
 
     <div id="grid" class="grid" aria-label="Table editor"></div>
@@ -100,6 +101,7 @@
       <label><input type="checkbox" id="cfg-collapsibleGroups"> Collapsible group rows</label>
       <label id="cfg-mobileSwitcher-label"><input type="checkbox" id="cfg-mobileSwitcher"> Mobile plan switcher
         <span class="hint" id="switcher-note" hidden>— inert: this table has merged cells</span></label>
+      <label><input type="checkbox" id="cfg-firstColMax" title="Keeps a long first-column label from squashing the value columns — wraps it at half the table width instead. On by default; needs renderer ≥ 0.5."> Cap first column width (50%)</label>
     </fieldset>
 
     <h2 class="panel_heading">Copy into the CMS</h2>

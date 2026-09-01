@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.4.1 — renderer styles (Cohesive CCC starter)
+ * ccc-tables v0.5.0 — renderer styles (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Base table typography/borders come from the CCC starter's `table_*` class
@@ -47,6 +47,18 @@
 
 .ccc-table_toolbar { display: none; margin-bottom: .5rem; }
 
+/* [reg:] de-emphasis token — regular weight. NOT zero-specificity: (0,2,0)
+   must out-rank the starter's bold `.table_header` (0,1,0) on first-column
+   cells. Upright by default; add `font-style: italic` in Designer for italic. */
+.ccc-table .ccc-table_soft { font-weight: 400; }
+
+/* First-column width cap (config.firstColMax, default 50% of table). The outer
+   becomes an inline-size query container so `50cqi` on the wrapped col-0 box
+   (.ccc-table_rh) means "50% of the table's own width" — long labels wrap and
+   the value columns keep their share, while short first columns stay narrow. */
+[ccc-clamp-first] { container-type: inline-size; }
+[ccc-clamp-first] .ccc-table_rh { width: fit-content; max-width: var(--ccc-first-col-max, 50cqi); }
+
 /* ---------- skin (zero specificity — restyle these classes in Designer) ---------- */
 
 :where(.ccc-table_caption) { caption-side: top; text-align: left; font-weight: 600; padding-bottom: .5em; }
@@ -59,12 +71,13 @@
    horizontally with wide tables and hide inside the max-height scroll region. */
 :where(.ccc-table_footnotes) { font-size: .78rem; padding: .7em 1em .55em; border-style: none solid solid; border-width: 0 1px 1px; border-color: var(--_table-row-styles---row--border, #d8dde2); }
 :where(.ccc-table_footnotes p) { margin: 0 0 .35em; opacity: .72; }
-/* A <ul> footnote list keeps its usual margins only toward SIBLING content:
-   no margin-top unless something (e.g. a <p>) precedes it, no margin-bottom
-   unless something follows — so the common lone-<ul> footnotes sit flush.
-   Deliberately NOT zero-specificity: must out-rank the host's base `ul` rule. */
-:where(.ccc-table_footnotes) ul:first-child { margin-top: 0; }
-:where(.ccc-table_footnotes) ul:last-child { margin-bottom: 0; }
+/* The footnotes block hugs its frame: its first/last child shed the outer
+   margins — covers <p>, <ul>, <ol> alike (CMS rich text is usually <p>). Inner
+   spacing between items is left to the host. Deliberately NOT zero-specificity:
+   (0,2,0) must out-rank the host rich-text rule (e.g. `.text-rich-text p`,
+   (0,1,1)) that otherwise leaves a fat margin below the last line. */
+.ccc-table_footnotes > :first-child { margin-top: 0; }
+.ccc-table_footnotes > :last-child { margin-bottom: 0; }
 :where(.ccc-table_error) { border: 1px dashed var(--ccc-danger, #b03a2e); color: var(--ccc-danger, #b03a2e); padding: .75em 1em; border-radius: .4em; font-size: .9rem; }
 
 /* cell tokens */
@@ -87,4 +100,6 @@
   [ccc-mobile-switcher] .table_row { grid-template-columns: 1fr !important; }
   [ccc-mobile-switcher] .table_cell { text-align: left; }
   [ccc-mobile-switcher] tbody .table_header.is-row-header { border-bottom: none; padding-bottom: .25em; }
+  /* Stacked rows are full-width — the first-column cap would crush the label. */
+  [ccc-mobile-switcher] .ccc-table_rh { max-width: none; }
 }

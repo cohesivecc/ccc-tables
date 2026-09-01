@@ -197,6 +197,12 @@ function previewNote(version) {
     notes.push('the mobile plan switcher on merged-cell tables needs renderer ≥ 0.4 (' +
       version + ' turns it off)');
   }
+  const cellText = [...state.headerRows, ...state.rows]
+    .flatMap(r => r.cells).map(c => c.text || '').join('\n');
+  if (/\[reg:|\^[*†‡§]/.test(cellText) && !atLeast(5)) {
+    notes.push('the [reg:] token and symbol footnote markers (^*, ^†) need renderer ≥ 0.5 (' +
+      version + ' shows them as literal text)');
+  }
   if (!notes.length) return '';
   return 'Heads up: ' + notes.join('; ') + '. Pick “local checkout” to preview the newest behavior.';
 }
@@ -269,6 +275,8 @@ function syncPanel() {
   ['stickyFirstCol', 'collapsibleGroups', 'mobileSwitcher'].forEach(k => {
     $('#cfg-' + k).checked = state.config[k] === true;
   });
+  // firstColMax cap is on by default (renderer default-on) — checked unless "none".
+  $('#cfg-firstColMax').checked = state.config.firstColMax !== 'none';
   // Renderer ≥ 0.4 supports the switcher on merged-cell tables (span-aware);
   // older renderers silently turn it off — say so instead of hard-disabling.
   const spanned = S.switcherInert(state);
@@ -505,6 +513,7 @@ document.querySelector('.toolbar-tokens').addEventListener('pointerdown', e => {
     const text = s.toString();
     if (token.startsWith('[link:')) insert = '[link:https://example.com|' + text + ']';
     else if (token.startsWith('[tip:')) insert = '[tip:' + text + '|explanation]';
+    else if (token.startsWith('[reg:')) insert = '[reg:' + text + ']';
   }
   document.execCommand('insertText', false, insert);
 });
@@ -528,6 +537,12 @@ $('#footnotes').addEventListener('input', e => {
     if (e.target.checked) state.config[k] = true; else delete state.config[k];
     renderOutputs(); scheduleSave(); commitHistory();
   });
+});
+// Cap is on by default: checked → implicit default (drop the key); unchecked → "none".
+$('#cfg-firstColMax').addEventListener('change', e => {
+  if (e.target.checked) delete state.config.firstColMax;
+  else state.config.firstColMax = 'none';
+  renderOutputs(); scheduleSave(); commitHistory();
 });
 
 /* ---------- copy buttons ---------- */

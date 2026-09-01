@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.4.1 — CMS-data-driven table renderer (Cohesive CCC starter)
+ * ccc-tables v0.5.0 — CMS-data-driven table renderer (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Renders semantic table markup from data blobs in the DOM:
@@ -13,12 +13,13 @@
  *           data-ccc-table-config="slug">…JSON…</script>  config
  *
  * Data field accepts JSON ({…}) or TSV (an Excel/Sheets copy IS TSV — paste as-is).
- * Cell tokens: [check] [xmark] [dollar] ^N [link:url|label] [tip:text|body]
+ * Cell tokens: [check] [xmark] [dollar] [link:url|label] [tip:text|body] [reg:text]
+ *   footnote refs: ^N or ^* ^** ^*** ^† ^‡ ^§   ([reg:] = regular-weight span)
  */
 (function () {
   'use strict';
 
-  var VERSION = '0.4.1';
+  var VERSION = '0.5.0';
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -59,7 +60,8 @@
       })
       .replace(/\[tip:([^\]|]+)\|([^\]]+)\]/g,
         '<span class="ccc-table_tip" data-tippy-content="$2" tabindex="0">$1</span>')
-      .replace(/\^(\d+)/g, '<sup>$1</sup>');
+      .replace(/\[reg:([^\]]+)\]/g, '<span class="ccc-table_soft">$1</span>')
+      .replace(/\^(\d+|[*†‡§]+)/g, '<sup>$1</sup>');
   }
 
   /* TSV → {columns, rows}. First line = header row. A row whose first cell is
@@ -93,6 +95,20 @@
     if (!sniff) throw new Error('empty data');
     if (sniff.charAt(0) === '{') return JSON.parse(sniff);
     return parseTSV(t, opts);
+  }
+
+  /* config.firstColMax → CSS max-width for the first column, or null (off).
+     Bare number / "40" / "40%" mean percent-of-table-width (→ NNcqi, resolved
+     against the query container the renderer puts on the outer). "none"/false/0
+     disable it; an explicit length ("30ch") passes through. Unset → 50% (D12
+     default-on: a no-op unless the first column already exceeds the cap). */
+  function firstColMaxCss(v) {
+    if (v === 'none' || v === false || v === 0 || v === '0') return null;
+    if (v == null || v === '') return '50cqi';
+    if (typeof v === 'number') return v + 'cqi';
+    var s = String(v).trim();
+    if (/^\d+(\.\d+)?%?$/.test(s)) return parseFloat(s) + 'cqi';
+    return s;
   }
 
   function buildTable(data, mount) {
@@ -185,6 +201,23 @@
     table.appendChild(tbody);
     var lastHead = resolveGrid(headRows)[headRows.length - 1] || [];
     var colCount = lastHead.reduce(function (m, p) { return Math.max(m, p.col + p.span); }, 0);
+    /* v0.5: first-column width cap. The cap can't sit on the cell (auto-layout
+       tables ignore cell max-width), so col-0 content is wrapped in a
+       .ccc-table_rh box the CSS caps against the outer query container (cqi).
+       Skipped for single-column tables; group-row headers are skipped too —
+       full-width bands carry no data-col, and spanning group labels stay
+       uncapped. Neutralized in the stacked mobile-switcher layout by CSS. */
+    var colMax = firstColMaxCss(cfg.firstColMax);
+    if (colMax && colCount > 1) {
+      outer.setAttribute('ccc-clamp-first', '');
+      outer.style.setProperty('--ccc-first-col-max', colMax);
+      table.querySelectorAll('[data-col="0"]').forEach(function (cell) {
+        if (cell.closest('.ccc-table_group-row')) return;
+        var box = el('div', 'ccc-table_rh');
+        while (cell.firstChild) box.appendChild(cell.firstChild);
+        cell.appendChild(box);
+      });
+    }
     if (cfg.mobileSwitcher && colCount > 2) {
       /* v0.4: span-aware — a merged cell stays visible whenever the selected
          column falls inside its span, so spanned tables keep the switcher.
@@ -300,6 +333,7 @@
     parseData: parseData,
     parseTSV: parseTSV,
     resolveGrid: resolveGrid,
+    firstColMaxCss: firstColMaxCss,
     fmt: fmt,
     buildTable: buildTable,
     overlay: overlay

@@ -54,6 +54,16 @@ test('configJSON: non-defaults only; empty config → empty string', () => {
   assert.deepEqual(JSON.parse(configJSON(s)), { tsvGroups: false });
 });
 
+test('configJSON: firstColMax — default cap stays implicit, off/custom emit', () => {
+  const base = () => fromParsed({ columns: [{ text: 'A' }, { text: 'B' }], rows: [] });
+  let s = base(); s.config = { firstColMax: 50 };        // explicit default
+  assert.equal(configJSON(s), '');
+  s = base(); s.config = { firstColMax: 'none' };         // cap turned off
+  assert.deepEqual(JSON.parse(configJSON(s)), { firstColMax: 'none' });
+  s = base(); s.config = { firstColMax: 40 };             // custom percent
+  assert.deepEqual(JSON.parse(configJSON(s)), { firstColMax: 40 });
+});
+
 test('footnotesHTML: escaped <p> lines, empty when no lines', () => {
   const s = fromParsed({ columns: [{ text: 'A' }, { text: 'B' }], rows: [] });
   assert.equal(footnotesHTML(s), '');

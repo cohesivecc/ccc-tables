@@ -50,6 +50,12 @@ export function configJSON(state) {
   });
   if (c.tsvGroups === false) out.tsvGroups = false;
   if (typeof c.highlightCol === 'number') out.highlightCol = c.highlightCol;
+  // firstColMax default is 50 (cap on) — implicit; emit only "none" (off) or a
+  // custom percent. Mirrors firstColMaxCss's default so preview == published.
+  if (c.firstColMax != null && c.firstColMax !== '' &&
+      !(c.firstColMax === 50 || c.firstColMax === '50' || c.firstColMax === '50%')) {
+    out.firstColMax = c.firstColMax;
+  }
   return Object.keys(out).length ? JSON.stringify(out) : '';
 }
 

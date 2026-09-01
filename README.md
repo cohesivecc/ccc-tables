@@ -150,6 +150,7 @@ renderer accepts the attribute on any element and keeps the rich HTML verbatim.
 | `mobileSwitcher` | ≤767px: chip toolbar shows one value column at a time (auto-disabled when body cells span) |
 | `highlightCol` | zero-based column index tinted with the category wash |
 | `tsvGroups` | `false` disables TSV group-row detection |
+| `firstColMax` | first-column width cap, percent of the table (default `50`; a no-op unless the column would exceed it). Accepts `50` / `"50%"`, an explicit length (`"30ch"`), or `"none"` to disable |
 
 ### Cell tokens
 
@@ -159,7 +160,8 @@ identically everywhere:
 | token | renders |
 | --- | --- |
 | `[check]` / `[xmark]` / `[dollar]` | icon glyphs |
-| `^N` | superscript footnote reference |
+| `^N` | superscript footnote reference — digits (`^1`) or the marker glyphs `*` `**` `***` `†` `‡` `§` (`^*`, `^†`) |
+| `[reg:text]` | regular-weight span — de-emphasize part of a bold first-column label (e.g. `Deductible [reg:(does not apply to Type A)]`); upright by default, add `font-style: italic` to `.ccc-table_soft` in Designer for italic |
 | `[link:url|label]` | in-cell link (`https:`, `tel:`, `mailto:`, `/…`, `#…` only) |
 | `[tip:text|body]` | tippy tooltip on `text` |
 
@@ -172,7 +174,8 @@ the mount — authoring mistakes fail loudly, not blankly.
 
 The script exposes `window.cccTables` (and CommonJS exports for Node):
 `version`, `init()`, `parseData(raw, opts)`, `parseTSV(text, opts)`,
-`buildTable(data, mountEl)`, `resolveGrid(rows)`, `fmt(text)`, `overlay(data, extras)`.
+`buildTable(data, mountEl)`, `resolveGrid(rows)`, `firstColMaxCss(value)`,
+`fmt(text)`, `overlay(data, extras)`.
 The builder tool consumes these so its preview IS the production renderer.
 
 ## Builder (authoring tool)

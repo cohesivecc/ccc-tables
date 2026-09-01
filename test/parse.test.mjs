@@ -102,6 +102,40 @@ test('fmt: superscript footnote refs', () => {
   assert.equal(ccc.fmt('Deductible^1'), 'Deductible<sup>1</sup>');
 });
 
+test('fmt: superscript accepts asterisk markers (single/double/triple)', () => {
+  assert.equal(ccc.fmt('Exams^*'), 'Exams<sup>*</sup>');
+  assert.equal(ccc.fmt('X-rays^**'), 'X-rays<sup>**</sup>');
+  assert.equal(ccc.fmt('sealants^***'), 'sealants<sup>***</sup>');
+});
+
+test('fmt: superscript accepts dagger, double dagger, section markers', () => {
+  assert.equal(ccc.fmt('Fillings^†'), 'Fillings<sup>†</sup>');
+  assert.equal(ccc.fmt('appliances^‡'), 'appliances<sup>‡</sup>');
+  assert.equal(ccc.fmt('note^§'), 'note<sup>§</sup>');
+});
+
+test('fmt: a caret before an unlisted character is left literal', () => {
+  assert.equal(ccc.fmt('5^x'), '5^x');
+});
+
+test('fmt: [reg:text] renders a regular-weight span', () => {
+  assert.equal(
+    ccc.fmt('[reg:(Does not apply for Type A services)]'),
+    '<span class="ccc-table_soft">(Does not apply for Type A services)</span>'
+  );
+});
+
+test('fmt: [reg:] escapes its contents like the rest of the cell', () => {
+  assert.equal(ccc.fmt('[reg:(a & b)]'), '<span class="ccc-table_soft">(a &amp; b)</span>');
+});
+
+test('fmt: [reg:] composes with a superscript marker inside it', () => {
+  assert.equal(
+    ccc.fmt('[reg:(Exams^*)]'),
+    '<span class="ccc-table_soft">(Exams<sup>*</sup>)</span>'
+  );
+});
+
 test('fmt: [link:url|label] renders a safe anchor', () => {
   assert.equal(
     ccc.fmt('[link:https://example.com/x|Plan details]'),
@@ -139,6 +173,30 @@ test('fmt: tokens compose in one cell', () => {
   assert.match(out, /is-check/);
   assert.match(out, /<sup>2<\/sup>/);
   assert.match(out, /href="\/plans"/);
+});
+
+// ---------- firstColMaxCss (config → CSS cap) ----------
+
+test('firstColMaxCss: default (unset) caps at 50% of table width', () => {
+  assert.equal(ccc.firstColMaxCss(undefined), '50cqi');
+});
+
+test('firstColMaxCss: a bare number or percent string is percent-of-table', () => {
+  assert.equal(ccc.firstColMaxCss(40), '40cqi');
+  assert.equal(ccc.firstColMaxCss('40'), '40cqi');
+  assert.equal(ccc.firstColMaxCss('40%'), '40cqi');
+});
+
+test('firstColMaxCss: "none"/false/0 disables the cap', () => {
+  assert.equal(ccc.firstColMaxCss('none'), null);
+  assert.equal(ccc.firstColMaxCss(false), null);
+  assert.equal(ccc.firstColMaxCss(0), null);
+  assert.equal(ccc.firstColMaxCss('0'), null);
+});
+
+test('firstColMaxCss: an explicit length is passed through as-is', () => {
+  assert.equal(ccc.firstColMaxCss('30ch'), '30ch');
+  assert.equal(ccc.firstColMaxCss('22em'), '22em');
 });
 
 // ---------- resolveGrid ----------
