@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.6.0 — CMS-data-driven table renderer (Cohesive CCC starter)
+ * ccc-tables v0.6.1 — CMS-data-driven table renderer (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Renders semantic table markup from data blobs in the DOM:
@@ -27,7 +27,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '0.6.0';
+  var VERSION = '0.6.1';
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -142,7 +142,8 @@
     resolveGrid(headRows).forEach(function (placed) {
       var tr = el('tr', 'table_row');
       placed.forEach(function (p) {
-        var th = el('th', 'table_header', p.cell.text);
+        var th = el('th', 'table_header');
+        th.innerHTML = fmt(p.cell.text);   /* column headers get the token vocabulary too */
         th.setAttribute('scope', 'col');
         if (p.cell.colspan) th.colSpan = p.cell.colspan;
         if (p.cell.rowspan) th.rowSpan = p.cell.rowspan;
@@ -274,7 +275,8 @@
       lastHead.forEach(function (p) {
         if (p.col === 0) return;
         if (!String(p.cell.text || '').trim()) return;   /* blank header cell → no chip */
-        var chip = el('button', 'ccc-table_chip', p.cell.text);
+        var chip = el('button', 'ccc-table_chip');
+        chip.innerHTML = fmt(p.cell.text);   /* mirror the column header's formatting */
         chip.type = 'button';
         chip.setAttribute('data-col', p.col);
         chip.addEventListener('click', function () {
