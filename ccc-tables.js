@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.5.0 — CMS-data-driven table renderer (Cohesive CCC starter)
+ * ccc-tables v0.6.0 — CMS-data-driven table renderer (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Renders semantic table markup from data blobs in the DOM:
@@ -13,13 +13,21 @@
  *           data-ccc-table-config="slug">…JSON…</script>  config
  *
  * Data field accepts JSON ({…}) or TSV (an Excel/Sheets copy IS TSV — paste as-is).
- * Cell tokens: [check] [xmark] [dollar] [link:url|label] [tip:text|body] [reg:text]
- *   footnote refs: ^N or ^* ^** ^*** ^† ^‡ ^§   ([reg:] = regular-weight span)
+ * Cell tokens: [check] [xmark] [dollar] [link:url|label] [tip:text|body] [reg:text] [nbsp]
+ *   footnote refs: ^N or ^* ^** ^*** ^† ^‡ ^§   ([reg:] = regular-weight span,
+ *   [nbsp] = non-breaking space — keeps two short words on one line)
+ *
+ * Table-level config (all optional): stickyFirstCol, collapsibleGroups,
+ *   mobileSwitcher, firstColMax, highlightCol, align, colDividers.
+ *   align        per-column text-align, indexed by grid column:
+ *                  ["left","center", …]  (unset = inherit the site defaults)
+ *   colDividers  grid columns that get a vertical rule on their LEFT edge —
+ *                  e.g. [4] to divide two plan groups: {"colDividers":[4]}
  */
 (function () {
   'use strict';
 
-  var VERSION = '0.5.0';
+  var VERSION = '0.6.0';
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -52,6 +60,9 @@
     return String(t == null ? '' : t)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
       .replace(/\n/g, '<br>')
+      /* [nbsp] first, so it survives inside a [reg:]/[link:]/[tip:] payload
+         (it clears the ] that would otherwise cut those tokens short). */
+      .replace(/\[nbsp\]/g, '\u00A0')
       .replace(/\[(check|xmark|dollar)\]/g, '<span class="ccc-ico is-$1" aria-hidden="true"></span>')
       .replace(/\[link:([^\]|]+)\|([^\]]+)\]/g, function (m, url, label) {
         url = url.trim();
@@ -109,6 +120,13 @@
     var s = String(v).trim();
     if (/^\d+(\.\d+)?%?$/.test(s)) return parseFloat(s) + 'cqi';
     return s;
+  }
+
+  /* config.align entry → a valid text-align keyword, or null (inherit). */
+  function alignValue(v) {
+    if (v == null) return null;
+    var s = String(v).trim().toLowerCase();
+    return (s === 'left' || s === 'center' || s === 'right') ? s : null;
   }
 
   function buildTable(data, mount) {
@@ -191,7 +209,10 @@
           if (p.cell.colspan) cell.colSpan = p.cell.colspan;
           if (p.cell.rowspan) cell.rowSpan = p.cell.rowspan;
           cell.setAttribute('data-col', p.col);
-          if (cfg.highlightCol != null && p.col === cfg.highlightCol) cell.classList.add('ccc-table_highlight');
+          /* highlightCol is a single grid column; a merged cell counts as
+             highlighted whenever the column falls inside its span (so mixed
+             merged/unmerged rows tint consistently). */
+          if (cfg.highlightCol != null && p.col <= cfg.highlightCol && cfg.highlightCol < p.col + (p.span || 1)) cell.classList.add('ccc-table_highlight');
           tr.appendChild(cell);
         });
         if (groupIdx && cfg.collapsibleGroups) tr.setAttribute('data-in-group', groupIdx);
@@ -216,6 +237,23 @@
         var box = el('div', 'ccc-table_rh');
         while (cell.firstChild) box.appendChild(cell.firstChild);
         cell.appendChild(box);
+      });
+    }
+    /* v0.6: per-column alignment (config.align) and column dividers
+       (config.colDividers). Both key off the resolved grid column (data-col)
+       and skip group-row bands. Attributes (not inline styles) so the mobile
+       stack can still left-align and dividers stay reskinnable in Designer. */
+    if (cfg.align || cfg.colDividers) {
+      var divSet = {};
+      if (cfg.colDividers != null) [].concat(cfg.colDividers).forEach(function (d) { divSet[+d] = true; });
+      table.querySelectorAll('[data-col]').forEach(function (cell) {
+        if (cell.closest('.ccc-table_group-row')) return;
+        var col = +cell.getAttribute('data-col');
+        if (cfg.align) {
+          var a = alignValue(cfg.align[col]);
+          if (a) cell.setAttribute('data-ccc-align', a);
+        }
+        if (divSet[col]) cell.setAttribute('data-ccc-divide', '');
       });
     }
     if (cfg.mobileSwitcher && colCount > 2) {
@@ -334,6 +372,7 @@
     parseTSV: parseTSV,
     resolveGrid: resolveGrid,
     firstColMaxCss: firstColMaxCss,
+    alignValue: alignValue,
     fmt: fmt,
     buildTable: buildTable,
     overlay: overlay

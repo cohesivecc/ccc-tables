@@ -64,6 +64,24 @@ test('configJSON: firstColMax — default cap stays implicit, off/custom emit', 
   assert.deepEqual(JSON.parse(configJSON(s)), { firstColMax: 40 });
 });
 
+test('configJSON: align — normalized, trailing-unset trimmed, off when all unset', () => {
+  const base = () => fromParsed({ columns: [{ text: 'A' }, { text: 'B' }, { text: 'C' }], rows: [] });
+  let s = base(); s.config = { align: [null, 'center', null] };
+  assert.deepEqual(JSON.parse(configJSON(s)), { align: [null, 'center'] });
+  s = base(); s.config = { align: ['LEFT', ' right '] };   // case/space normalized
+  assert.deepEqual(JSON.parse(configJSON(s)), { align: ['left', 'right'] });
+  s = base(); s.config = { align: [null, 'bogus', ''] };   // nothing valid → omitted
+  assert.equal(configJSON(s), '');
+});
+
+test('configJSON: colDividers — unique, sorted; empty omitted', () => {
+  const base = () => fromParsed({ columns: [{ text: 'A' }, { text: 'B' }, { text: 'C' }], rows: [] });
+  let s = base(); s.config = { colDividers: [2, 1, 2] };
+  assert.deepEqual(JSON.parse(configJSON(s)), { colDividers: [1, 2] });
+  s = base(); s.config = { colDividers: [] };
+  assert.equal(configJSON(s), '');
+});
+
 test('footnotesHTML: escaped <p> lines, empty when no lines', () => {
   const s = fromParsed({ columns: [{ text: 'A' }, { text: 'B' }], rows: [] });
   assert.equal(footnotesHTML(s), '');

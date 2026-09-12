@@ -56,6 +56,17 @@ export function configJSON(state) {
       !(c.firstColMax === 50 || c.firstColMax === '50' || c.firstColMax === '50%')) {
     out.firstColMax = c.firstColMax;
   }
+  // Per-column alignment: normalize via the renderer's own alignValue (no
+  // drift), drop trailing unset slots, emit only if something is set.
+  if (Array.isArray(c.align)) {
+    const a = c.align.map(v => ccc().alignValue(v));
+    while (a.length && !a[a.length - 1]) a.pop();
+    if (a.some(Boolean)) out.align = a.map(v => v || null);
+  }
+  // Column dividers: unique, sorted grid-column indices.
+  if (Array.isArray(c.colDividers) && c.colDividers.length) {
+    out.colDividers = [...new Set(c.colDividers.map(Number))].sort((x, y) => x - y);
+  }
   return Object.keys(out).length ? JSON.stringify(out) : '';
 }
 

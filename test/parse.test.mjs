@@ -168,6 +168,24 @@ test('fmt: [tip:text|body] renders a tippy carrier', () => {
   );
 });
 
+test('fmt: [nbsp] becomes a non-breaking space', () => {
+  assert.equal(ccc.fmt('No[nbsp]Orthodontics'), 'No Orthodontics');
+});
+
+test('fmt: [nbsp] survives inside a [reg:] payload', () => {
+  assert.equal(
+    ccc.fmt('[reg:No[nbsp]Orthodontics]'),
+    '<span class="ccc-table_soft">No Orthodontics</span>'
+  );
+});
+
+test('fmt: [nbsp] survives inside a [link:] label', () => {
+  assert.equal(
+    ccc.fmt('[link:/x|No[nbsp]Orthodontics]'),
+    '<a class="ccc-table_link" href="/x">No Orthodontics</a>'
+  );
+});
+
 test('fmt: tokens compose in one cell', () => {
   const out = ccc.fmt('[check] Covered^2 [link:/plans|see plans]');
   assert.match(out, /is-check/);
@@ -197,6 +215,22 @@ test('firstColMaxCss: "none"/false/0 disables the cap', () => {
 test('firstColMaxCss: an explicit length is passed through as-is', () => {
   assert.equal(ccc.firstColMaxCss('30ch'), '30ch');
   assert.equal(ccc.firstColMaxCss('22em'), '22em');
+});
+
+// ---------- alignValue (config.align → text-align keyword) ----------
+
+test('alignValue: accepts left/center/right, case-insensitive and trimmed', () => {
+  assert.equal(ccc.alignValue('left'), 'left');
+  assert.equal(ccc.alignValue(' Center '), 'center');
+  assert.equal(ccc.alignValue('RIGHT'), 'right');
+});
+
+test('alignValue: unset or unsupported keywords return null (inherit)', () => {
+  assert.equal(ccc.alignValue(null), null);
+  assert.equal(ccc.alignValue(undefined), null);
+  assert.equal(ccc.alignValue(''), null);
+  assert.equal(ccc.alignValue('justify'), null);
+  assert.equal(ccc.alignValue('middle'), null);
 });
 
 // ---------- resolveGrid ----------

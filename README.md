@@ -17,8 +17,8 @@ Load the script and stylesheet once per page (site-wide custom code or an
 embed), pinned to a release tag:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.2.2/ccc-tables.css">
-<script src="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.2.2/ccc-tables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.6.0/ccc-tables.css">
+<script src="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.6.0/ccc-tables.min.js"></script>
 ```
 
 jsDelivr serves `.min.js`/`.min.css` automatically — no build step in this repo.
@@ -148,9 +148,11 @@ renderer accepts the attribute on any element and keeps the rich HTML verbatim.
 | `stickyFirstCol` | first column sticks while scrolling horizontally |
 | `collapsibleGroups` | group rows become expand/collapse toggles |
 | `mobileSwitcher` | ≤767px: chip toolbar shows one value column at a time (auto-disabled when body cells span) |
-| `highlightCol` | zero-based column index tinted with the category wash |
+| `highlightCol` | zero-based grid column tinted with the category wash (a merged cell tints whenever the column falls inside its span) |
 | `tsvGroups` | `false` disables TSV group-row detection |
 | `firstColMax` | first-column width cap, percent of the table (default `50`; a no-op unless the column would exceed it). Accepts `50` / `"50%"`, an explicit length (`"30ch"`), or `"none"` to disable |
+| `align` | per-column text alignment, indexed by grid column: `["left","center", …]` — `null`/omitted keeps the site default (first column left, others centered). Only `left`/`center`/`right`; ignored per-cell in the stacked mobile switcher |
+| `colDividers` | grid columns that get a vertical rule on their **left** edge — e.g. `[4]` to divide two plan groups. Reskin via `--ccc-divide-color` |
 
 ### Cell tokens
 
@@ -162,6 +164,7 @@ identically everywhere:
 | `[check]` / `[xmark]` / `[dollar]` | icon glyphs |
 | `^N` | superscript footnote reference — digits (`^1`) or the marker glyphs `*` `**` `***` `†` `‡` `§` (`^*`, `^†`) |
 | `[reg:text]` | regular-weight span — de-emphasize part of a bold first-column label (e.g. `Deductible [reg:(does not apply to Type A)]`); upright by default, add `font-style: italic` to `.ccc-table_soft` in Designer for italic |
+| `[nbsp]` | non-breaking space — keeps two short words on one line (e.g. `No[nbsp]Orthodontics`). The `&nbsp;` entity is escaped to literal text, so use this token instead |
 | `[link:url|label]` | in-cell link (`https:`, `tel:`, `mailto:`, `/…`, `#…` only) |
 | `[tip:text|body]` | tippy tooltip on `text` |
 
@@ -175,7 +178,7 @@ the mount — authoring mistakes fail loudly, not blankly.
 The script exposes `window.cccTables` (and CommonJS exports for Node):
 `version`, `init()`, `parseData(raw, opts)`, `parseTSV(text, opts)`,
 `buildTable(data, mountEl)`, `resolveGrid(rows)`, `firstColMaxCss(value)`,
-`fmt(text)`, `overlay(data, extras)`.
+`alignValue(value)`, `fmt(text)`, `overlay(data, extras)`.
 The builder tool consumes these so its preview IS the production renderer.
 
 ## Builder (authoring tool)
@@ -183,7 +186,8 @@ The builder tool consumes these so its preview IS the production renderer.
 `builder/` is a standalone static page for Marketer-seat contributors: paste a
 range copied from Excel/Google Sheets (or an existing `Data` field), click-
 configure it (group rows, cell merges, multi-row headers, header-cell flags,
-highlight column, token palette, caption/footnotes/options, undo/redo), and copy
+highlight column, per-column alignment, column dividers, token palette,
+caption/footnotes/options, undo/redo), and copy
 the four CMS field values —
 **Data** (TSV when round-trip-safe, else JSON with a stated reason), **Caption**,
 **Footnotes** (pastes as rich text), **Config**. The preview pane loads the

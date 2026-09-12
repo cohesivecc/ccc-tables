@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.5.0 — renderer styles (Cohesive CCC starter)
+ * ccc-tables v0.6.0 — renderer styles (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Base table typography/borders come from the CCC starter's `table_*` class
@@ -59,6 +59,18 @@
 [ccc-clamp-first] { container-type: inline-size; }
 [ccc-clamp-first] .ccc-table_rh { width: fit-content; max-width: var(--ccc-first-col-max, 50cqi); }
 
+/* Per-column text alignment (config.align). Deliberately NOT zero-specificity:
+   (0,2,0) must out-rank the starter's own .table_cell / .table_header default
+   alignment. The stacked mobile-switcher rule below re-wins to left-align. */
+.ccc-table [data-ccc-align="left"] { text-align: left; }
+.ccc-table [data-ccc-align="center"] { text-align: center; }
+.ccc-table [data-ccc-align="right"] { text-align: right; }
+
+/* Column dividers (config.colDividers): a vertical rule on the LEFT edge of a
+   grid column — marks a group boundary (e.g. between two plan groups). Colored
+   from the category hook; override --ccc-divide-color to reskin per site. */
+.ccc-table [data-ccc-divide] { border-left: 2px solid var(--ccc-divide-color, var(--ccc-cat-500, #2f6e63)); }
+
 /* ---------- skin (zero specificity — restyle these classes in Designer) ---------- */
 
 :where(.ccc-table_caption) { caption-side: top; text-align: left; font-weight: 600; padding-bottom: .5em; }
@@ -98,7 +110,11 @@
   [ccc-mobile-switcher] thead { display: none; }
   /* !important: must beat the starter's own mobile grid rule. */
   [ccc-mobile-switcher] .table_row { grid-template-columns: 1fr !important; }
-  [ccc-mobile-switcher] .table_cell { text-align: left; }
+  /* Stacked cells read left-aligned regardless of a per-column align override,
+     and a group divider makes no sense in a single-column stack. */
+  [ccc-mobile-switcher] .table_cell,
+  [ccc-mobile-switcher] [data-ccc-align] { text-align: left; }
+  [ccc-mobile-switcher] [data-ccc-divide] { border-left: none; }
   [ccc-mobile-switcher] tbody .table_header.is-row-header { border-bottom: none; padding-bottom: .25em; }
   /* Stacked rows are full-width — the first-column cap would crush the label. */
   [ccc-mobile-switcher] .ccc-table_rh { max-width: none; }

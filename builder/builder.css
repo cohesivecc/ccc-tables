@@ -76,6 +76,7 @@ code { background: var(--soft); padding: 0 .25em; border-radius: 3px; }
 .grid .is-sel { box-shadow: inset 0 0 0 2px #3b82d0; background: #eef5fc; }
 .grid thead .is-sel { background: #2f5a8f; }
 .grid .is-hl { background: #fdf6e7; }
+.grid .is-divide { border-left: 3px solid #b45309; }
 .grid .rowbtns { border: none; min-width: 0; }
 
 .status { font-size: .82rem; color: var(--muted); min-height: 1.2em; margin: .3rem 0 0; }

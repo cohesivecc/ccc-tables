@@ -54,6 +54,8 @@
         <button data-act="col-left" type="button" title="Move the selected column left">◀</button>
         <button data-act="col-right" type="button" title="Move the selected column right">▶</button>
         <button data-act="highlight" type="button" title="Tint the selected column (e.g. a recommended plan)">Highlight</button>
+        <button data-act="align" type="button" title="Cycle the selected column’s text alignment: default → left → center → right (needs renderer ≥ 0.6)">Align</button>
+        <button data-act="divider" type="button" title="Toggle a vertical divider on the selected column’s left edge — e.g. between two plan groups (needs renderer ≥ 0.6)">Divider</button>
       </div>
       <div class="toolbar_group" aria-label="History">
         <button data-act="undo" type="button" title="Undo (⌘Z)">↺ Undo</button>
@@ -78,6 +80,7 @@
       <button data-token="[link:https://example.com|label]" type="button" title="A link — edit the url and label">link</button>
       <button data-token="[tip:term|explanation]" type="button" title="A hover tooltip — edit the term and explanation">tip</button>
       <button data-token="[reg:regular-weight text]" type="button" title="Regular weight — de-emphasize part of a bold first-column label (e.g. a parenthetical). Select text first to wrap it.">reg</button>
+      <button data-token="[nbsp]" type="button" title="A non-breaking space — keeps two short words on the same line (e.g. No[nbsp]Orthodontics). Place it between the words. Needs renderer ≥ 0.6.">nbsp</button>
       <button data-token="^1" type="button" title="A footnote marker — superscript, matching a footnote line. Use a number (^1) or a symbol: ^* ^** ^*** ^† ^‡ ^§">^1 footnote</button>
     </div>
 

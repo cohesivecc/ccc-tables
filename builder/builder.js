@@ -78,12 +78,19 @@ function renderGrid() {
           td.classList.add('is-sel');
         }
         if (!row.group && typeof state.config.highlightCol === 'number' &&
-            p.col === state.config.highlightCol) td.classList.add('is-hl');
+            p.col <= state.config.highlightCol &&
+            state.config.highlightCol < p.col + span) td.classList.add('is-hl');
+        if (!row.group && Array.isArray(state.config.colDividers) &&
+            state.config.colDividers.includes(p.col)) td.classList.add('is-divide');
         const ed = document.createElement('div');
         ed.className = 'cell';
         ed.contentEditable = 'plaintext-only';
         ed.spellcheck = false;
         ed.textContent = cell.text || '';
+        if (!row.group && Array.isArray(state.config.align)) {
+          const a = ccc.alignValue(state.config.align[p.col]);
+          if (a) ed.style.textAlign = a;
+        }
         td.appendChild(ed);
         tr.appendChild(td);
       });
@@ -202,6 +209,12 @@ function previewNote(version) {
   if (/\[reg:|\^[*†‡§]/.test(cellText) && !atLeast(5)) {
     notes.push('the [reg:] token and symbol footnote markers (^*, ^†) need renderer ≥ 0.5 (' +
       version + ' shows them as literal text)');
+  }
+  const usesAlign = Array.isArray(state.config.align) && state.config.align.some(Boolean);
+  const usesDividers = Array.isArray(state.config.colDividers) && state.config.colDividers.length > 0;
+  if ((usesAlign || usesDividers || /\[nbsp\]/.test(cellText)) && !atLeast(6)) {
+    notes.push('per-column alignment, column dividers, and the [nbsp] token need renderer ≥ 0.6 (' +
+      version + ' ignores them — [nbsp] shows as literal text)');
   }
   if (!notes.length) return '';
   return 'Heads up: ' + notes.join('; ') + '. Pick “local checkout” to preview the newest behavior.';
@@ -442,6 +455,24 @@ const ACTIONS = {
     const k = selRect().c1;
     state.config.highlightCol = state.config.highlightCol === k ? undefined : k;
     if (state.config.highlightCol === undefined) delete state.config.highlightCol;
+  },
+  'align': () => {
+    if (!sel) return status('Select a column first.', 'warn');
+    const k = selRect().c1;
+    const cycle = [undefined, 'left', 'center', 'right'];
+    const a = Array.isArray(state.config.align) ? state.config.align : [];
+    a[k] = cycle[(cycle.indexOf(a[k]) + 1) % cycle.length];
+    if (a.some(Boolean)) state.config.align = a; else delete state.config.align;
+    status('Column ' + (k + 1) + ' alignment: ' + (a[k] || 'default'));
+  },
+  'divider': () => {
+    if (!sel) return status('Select a column first.', 'warn');
+    const k = selRect().c1;
+    if (k === 0) return status('A divider sits on a column’s left edge — pick a column after the first.', 'warn');
+    const set = new Set(Array.isArray(state.config.colDividers) ? state.config.colDividers : []);
+    if (set.has(k)) set.delete(k); else set.add(k);
+    if (set.size) state.config.colDividers = [...set].sort((x, y) => x - y);
+    else delete state.config.colDividers;
   },
   'header-cell': () => {
     if (!sel || sel.section !== 'body') return status('Select body cells first.', 'warn');
