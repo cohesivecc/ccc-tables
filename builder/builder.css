@@ -51,6 +51,11 @@ code { background: var(--soft); padding: 0 .25em; border-radius: 3px; }
   border: 1px solid var(--line); border-radius: 6px; padding: .5rem;
 }
 .paste_row { display: flex; align-items: center; gap: .8rem; margin-top: .5rem; }
+.paste_hint { margin: .5rem 0 0; max-width: 60rem; }
+.paste_field { display: block; font-size: .82rem; font-weight: 600; margin-top: .5rem; }
+.paste_field textarea { margin-top: .25rem; }
+.paste_grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
+@media (max-width: 760px) { .paste_grid { grid-template-columns: 1fr; } }
 
 .toolbar {
   display: flex; gap: .9rem; flex-wrap: wrap; align-items: center;
@@ -107,6 +112,18 @@ fieldset.panel_field label { display: block; font-weight: normal; font-size: .85
   max-height: 9rem; overflow: auto; white-space: pre-wrap; word-break: break-word;
 }
 .out_value:empty::before { content: "— nothing to paste —"; color: var(--muted); font-style: italic; }
+
+/* Change markers vs the import baseline */
+.sync_note { margin: -.2rem 0 .6rem; }
+.mark_pasted { margin: 0 0 .7rem; font-size: .8rem; }
+.out_badge { font-size: .72rem; font-weight: 600; padding: .05em .5em; border-radius: 99px; white-space: nowrap; }
+.out.is-changed { border-color: #b45309; box-shadow: 0 0 0 1px #b45309; }
+.out.is-changed .out_badge { background: #b45309; color: #fff; }
+.out.is-unchanged .out_badge { background: var(--soft); color: var(--muted); }
+.out.is-unchanged .out_value { opacity: .55; }
+.out_warn { margin: 0; padding: .4rem .6rem; font-size: .78rem; color: var(--warn); background: #fdf6e7;
+  border-top: 1px solid var(--line); }
+.out_warn:empty { display: none; }
 
 .preview { padding: 0 1.2rem 2rem; }
 .preview_bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: .5rem; }

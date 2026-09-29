@@ -136,6 +136,91 @@ export function dataFieldValue(state) {
   return json('not round-trip-safe as TSV');
 }
 
+/* The four CMS field values exactly as the copy boxes emit them. The import
+   baseline and every later render go through this one function, so "changed"
+   compares builder output to builder output — never to the raw CMS text, whose
+   formatting (TSV vs JSON, key order, false-valued defaults) can legitimately
+   differ from what the builder would write for the same table. */
+export function fieldValues(state) {
+  return {
+    data: dataFieldValue(state).value,
+    caption: captionText(state),
+    footnotes: footnotesHTML(state),
+    config: configJSON(state),
+  };
+}
+
+/* CMS Footnotes field → builder lines. Accepts the RichText HTML (<p>, <br>,
+   inline tags) or the plain text a copy out of the Webflow editor yields (one
+   paragraph per line, sometimes blank-line separated). */
+export function footnotesFromCms(text) {
+  let t = String(text || '');
+  if (/<\s*(p|br|div|li|em|strong|span)\b/i.test(t)) {
+    t = t.replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|li)>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+  }
+  return t.replace(/\r\n?/g, '\n').split('\n').map(l => l.trim()).filter(Boolean);
+}
+
+/* CMS Config field → object, or null when the box is empty. Throws a message
+   meant for an editor, not a developer. */
+export function configFromCms(text) {
+  const t = String(text || '').trim();
+  if (!t) return null;
+  let obj;
+  try { obj = JSON.parse(t); } catch (e) {
+    throw new Error('the Config box isn’t valid JSON — copy the whole Config field, including the { } braces');
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    throw new Error('the Config box should hold one { … } object');
+  }
+  return obj;
+}
+
+/* A friendlier message when a pasted Data blob won't parse. The common
+   mistake: pasting the Config field onto the end of the Data field. */
+export function dataErrorHint(text, err) {
+  const t = String(text || '').trim();
+  if (t.charAt(0) === '{' && /\}\s*\{/.test(t)) {
+    return 'that looks like two JSON objects — paste the Config field into the Config box below, not after the Data';
+  }
+  return err && err.message ? err.message : String(err);
+}
+
+/* Import: the four CMS fields → builder state. Data is required; the other
+   three are optional and, when filled, win over anything a legacy one-chunk
+   JSON Data blob carried. configProvided records whether the table's CMS
+   Config actually came in — without it, a Config-changing click would emit a
+   Config that REPLACES the table's live options instead of editing them. */
+export function stateFromCms({ data, caption, footnotes, config } = {}) {
+  const sniff = String(data || '').trim();
+  if (!sniff) throw new Error('paste the table’s Data field first');
+  const cfg = configFromCms(config);
+  let parsed;
+  try {
+    // JSON blobs go through the real parser; pasted ranges go through the
+    // Excel-clipboard parser (quoted multiline cells arrive as ONE cell) —
+    // except when the imported Config turns TSV group detection off, which
+    // only the renderer's own parseTSV honours (CMS TSV never has quoting).
+    parsed = sniff.charAt(0) === '{'
+      ? ccc().parseData(sniff)
+      : cfg && cfg.tsvGroups === false
+        ? ccc().parseData(String(data), cfg)
+        : gridToParsed(parseExcelClipboard(String(data)));
+  } catch (e) {
+    throw new Error(dataErrorHint(sniff, e));
+  }
+  const legacyConfig = !!(parsed.config && typeof parsed.config === 'object');
+  const state = fromParsed(parsed);
+  if (String(caption || '').trim()) state.caption = String(caption).trim();
+  if (String(footnotes || '').trim()) state.footnotes = footnotesFromCms(footnotes);
+  if (cfg) state.config = { ...cfg };
+  return { state, configProvided: !!cfg || legacyConfig };
+}
+
 /* Excel/Sheets CLIPBOARD parser for the builder's import path. Unlike the
  * renderer's parseTSV (which the CMS Data field uses and which has no quote
  * handling), a spreadsheet clipboard wraps any cell containing a newline,

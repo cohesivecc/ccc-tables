@@ -13,6 +13,7 @@ const ccc = window.cccTables;
 const $ = sel => document.querySelector(sel);
 
 const DRAFT_KEY = 'ccc-builder-draft';
+const BASELINE_KEY = 'ccc-builder-baseline';
 const VERSION_KEY = 'ccc-builder-version';
 const JSDELIVR_META = 'https://data.jsdelivr.com/v1/packages/gh/cohesivecc/ccc-tables';
 const JSDELIVR_FILE = v => `https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@${v}`;
@@ -25,6 +26,9 @@ const SAMPLE = {
 };
 
 let state = M.blankState();
+/* What the CMS item held at import, as the builder would emit it (S.fieldValues),
+   plus whether its Config came in. null = a new table (paste every field). */
+let baseline = null;
 let sel = null; // { section, anchor: [row, gridCol], focus: [row, gridCol] }
 
 /* ---------- selection helpers ---------- */
@@ -129,21 +133,57 @@ function renderOutputs() {
     'out-footnotes': { value: foot, plainAlt: footLines, ok: true, html: true },
     'out-config': { value: config, ok: true },
   };
-  const set = (id, text, statusText, err) => {
+  const now = S.fieldValues(state);
+  const set = (id, key, text, statusText, err) => {
     const box = $('#' + id);
     box.querySelector('.out_value').textContent = text;
     const st = box.querySelector('.out_status');
     st.textContent = statusText || '';
     st.classList.toggle('is-err', !!err);
     box.querySelector('.copy').disabled = !text || !!err;
+    // Change marker vs the import baseline.
+    const head = box.querySelector('.out_head');
+    let badge = head.querySelector('.out_badge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'out_badge';
+      head.insertBefore(badge, head.querySelector('.copy'));
+    }
+    let warnLine = box.querySelector('.out_warn');
+    if (!warnLine) {
+      warnLine = document.createElement('p');
+      warnLine.className = 'out_warn';
+      box.appendChild(warnLine);
+    }
+    const changed = !!baseline && baseline.fields[key] !== now[key];
+    box.classList.toggle('is-changed', changed);
+    box.classList.toggle('is-unchanged', !!baseline && !changed);
+    badge.hidden = !baseline;
+    badge.textContent = !baseline ? ''
+      : !changed ? 'Unchanged — skip'
+        : text ? 'Changed — paste this' : 'Changed — clear this field in the CMS';
+    warnLine.textContent = '';
+    if (key === 'config' && changed && !baseline.configProvided) {
+      warnLine.textContent = 'This table’s CMS Config wasn’t imported, so pasting this would REPLACE ' +
+        'its current options (sticky column, switcher, dividers…) rather than add to them. ' +
+        'If the CMS item has a Config, re-import with it in the Config box first.';
+    }
   };
-  set('out-data', data.value,
+  set('out-data', 'data', data.value,
     v.errors.length ? v.errors[0]
-      : data.format === 'tsv' ? 'TSV' : 'JSON — ' + data.reason,
+      : data.format === 'tsv' ? 'TSV (same field as JSON)' : 'JSON — ' + data.reason,
     v.errors.length > 0);
-  set('out-caption', caption);
-  set('out-footnotes', foot, foot ? 'pastes as rich text' : '');
-  set('out-config', config);
+  set('out-caption', 'caption', caption);
+  set('out-footnotes', 'footnotes', foot, foot ? 'pastes as rich text' : '');
+  set('out-config', 'config', config);
+  const nChanged = baseline ? Object.keys(now).filter(k => baseline.fields[k] !== now[k]).length : 0;
+  $('#sync-note').textContent = !baseline
+    ? 'New table — paste every field into a new CMS item.'
+    : nChanged === 0
+      ? 'Nothing changed yet — nothing to paste.'
+      : nChanged + ' field' + (nChanged > 1 ? 's' : '') + ' changed — paste only the highlighted ' +
+        (nChanged > 1 ? 'boxes' : 'box') + ' back into the CMS item.';
+  $('#mark-pasted').hidden = !baseline || nChanged === 0;
   const warn = $('#warnings');
   warn.textContent = v.warnings.join(' · ');
   warn.className = 'status' + (v.warnings.length ? ' is-warn' : '');
@@ -243,6 +283,21 @@ function scheduleSave() {
   }, 500);
 }
 
+function saveBaseline() {
+  try {
+    if (baseline) localStorage.setItem(BASELINE_KEY, JSON.stringify(baseline));
+    else localStorage.removeItem(BASELINE_KEY);
+  } catch (e) { /* storage unavailable — fine */ }
+}
+
+function restoreBaseline() {
+  try {
+    const raw = localStorage.getItem(BASELINE_KEY);
+    const b = raw && JSON.parse(raw);
+    if (b && b.fields && typeof b.fields === 'object') baseline = b;
+  } catch (e) { /* ignore */ }
+}
+
 function restoreDraft() {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
@@ -301,21 +356,33 @@ function syncPanel() {
 
 /* ---------- import ---------- */
 
-function importData(text) {
+/* Import the CMS item's fields (or an Excel range in the Data box). The
+   baseline snapshot is taken from the builder's OWN serialization of what came
+   in, so the change markers ignore format-only differences with the CMS text. */
+function importData() {
   const st = $('#import-status');
   try {
-    const sniff = String(text || '').trim();
-    if (!sniff) throw new Error('empty data');
-    // JSON blobs go through the real parser; pasted ranges go through the
-    // Excel-clipboard parser (quoted multiline cells arrive as ONE cell).
-    const parsed = sniff.charAt(0) === '{'
-      ? ccc.parseData(sniff)
-      : S.gridToParsed(S.parseExcelClipboard(text));
-    state = M.fromParsed(parsed);
+    const got = S.stateFromCms({
+      data: $('#paste-box').value,
+      caption: $('#in-caption').value,
+      footnotes: $('#in-footnotes').value,
+      config: $('#in-config').value,
+    });
+    state = got.state;
+    // A spreadsheet range (non-JSON Data, nothing else filled) is a NEW table:
+    // no baseline, every field gets pasted. Anything else is a CMS item.
+    const onlyRange = $('#paste-box').value.trim().charAt(0) !== '{' &&
+      !['#in-caption', '#in-footnotes', '#in-config'].some(id => $(id).value.trim());
+    baseline = onlyRange ? null
+      : { fields: S.fieldValues(state), configProvided: got.configProvided };
+    saveBaseline();
     sel = null;
-    st.textContent = 'Imported.';
-    st.className = 'status';
-    $('#paste-details').open = false;
+    st.textContent = onlyRange
+      ? 'Imported as a new table — paste every field. (Editing a table already in the CMS? Fill its other boxes too.)'
+      : got.configProvided ? 'Imported.'
+        : 'Imported — no Config. If this CMS item has a Config, add it to the Config box and import again.';
+    st.className = 'status' + (onlyRange || got.configProvided ? '' : ' is-warn');
+    if (onlyRange || got.configProvided) $('#paste-details').open = false;
     refresh();
   } catch (e) {
     st.textContent = 'Could not read that: ' + e.message;
@@ -628,13 +695,19 @@ document.querySelectorAll('.out .copy').forEach(btn => {
 
 /* ---------- header bar ---------- */
 
+function clearImportBoxes() {
+  ['#paste-box', '#in-caption', '#in-footnotes', '#in-config'].forEach(id => { $(id).value = ''; });
+  $('#import-status').textContent = '';
+}
+
 $('#new-table').addEventListener('click', () => {
   state = M.blankState();
   sel = null;
+  baseline = null;
+  saveBaseline();
   try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
   $('#paste-details').open = true;
-  $('#paste-box').value = '';
-  $('#import-status').textContent = '';
+  clearImportBoxes();
   refresh();
 });
 
@@ -644,11 +717,19 @@ $('#load-sample').addEventListener('click', () => {
   state.footnotes = [...SAMPLE.footnotes];
   state.config = { ...SAMPLE.config };
   sel = null;
+  baseline = null;
+  saveBaseline();
   $('#paste-details').open = false;
   refresh();
 });
 
-$('#import').addEventListener('click', () => importData($('#paste-box').value));
+$('#import').addEventListener('click', importData);
+
+$('#mark-pasted').addEventListener('click', () => {
+  baseline = { fields: S.fieldValues(state), configProvided: true };
+  saveBaseline();
+  renderOutputs();
+});
 
 $('#w-desktop').addEventListener('click', () => {
   $('#preview').classList.remove('is-mobile');
@@ -700,6 +781,6 @@ async function loadVersions() {
 
 /* ---------- boot ---------- */
 
-if (restoreDraft()) $('#paste-details').open = false;
+if (restoreDraft()) { $('#paste-details').open = false; restoreBaseline(); }
 refresh();
 loadVersions();

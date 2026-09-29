@@ -195,6 +195,22 @@ pinned jsDelivr build of this renderer (release-tag picker, mobile width
 toggle), fed the exact strings the copy buttons emit — preview == production.
 Drafts autosave to the browser's localStorage.
 
+**Editing a table that's already in the CMS (round trip).** The import panel
+mirrors the output: paste the item's **Data**, **Config**, **Caption** and
+**Footnotes** into their matching boxes. Config matters most — dividers,
+alignment, highlight and the options checkboxes live in Config, not Data, so a
+Data-only import starts from blank options and any Config click would emit a
+Config that *replaces* the table's live one (the builder warns about exactly
+this). After import, each copy box is marked **Changed — paste this** or
+**Unchanged — skip**, compared against the builder's own serialization of what
+came in (so TSV-vs-JSON and key-order differences with the CMS text never show
+as changes). **I've pasted the changes** resets the markers. A Data box holding
+only a spreadsheet range, with the other boxes empty, is treated as a new table
+(every field gets pasted). The legacy one-chunk JSON (`caption`/`footnotes`/
+`config` keys inside Data) still imports; a filled box wins over its keys.
+Caveat: footnotes are re-emitted as plain `<p>` lines, so inline formatting from
+the CMS (e.g. italics) is dropped if you paste an edited Footnotes box back.
+
 Hosted via GitHub Pages (Settings → Pages → Deploy from branch → `master`,
 `/ (root)`): `https://cohesivecc.github.io/ccc-tables/builder/`. Cell richness
 is tokens-only by design — the builder never inserts site components.

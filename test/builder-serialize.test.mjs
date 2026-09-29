@@ -354,3 +354,91 @@ test('switcherInert: true when body rows (or multi-cell group rows) carry spans'
     rows: [{ group: true, cells: [{ text: 'Rx' }, { text: 'Retail', colspan: 2 }] }] });
   assert.equal(switcherInert(cellGroup), true);
 });
+
+// ---------- CMS round-trip import (four-field import + change baseline) ----------
+
+const { stateFromCms, fieldValues, footnotesFromCms, configFromCms, dataErrorHint } = ser;
+
+const RT_DATA = JSON.stringify({
+  columns: [{ text: '' }, { text: 'Plan A' }, { text: 'Plan B' }, { text: 'Plan C' }],
+  rows: [
+    { group: true, cells: [{ text: 'Band one' }] },
+    { cells: [{ text: 'Tier 1', header: true }, { text: '$1' }, { text: '$2' }, { text: '$3' }] },
+    { cells: [{ text: 'Tier 2', header: true }, { text: '$4' }, { text: '$5' }, { text: '$6' }] },
+  ],
+});
+const RT_CONFIG = '{"stickyFirstCol":true,"collapsibleGroups":false,"mobileSwitcher":true,"colDividers":[2]}';
+
+test('stateFromCms: the Config box is applied and marks configProvided', () => {
+  const { state, configProvided } = stateFromCms({ data: RT_DATA, config: RT_CONFIG });
+  assert.equal(configProvided, true);
+  assert.deepEqual(state.config.colDividers, [2]);
+  assert.equal(state.config.stickyFirstCol, true);
+  assert.equal(state.config.mobileSwitcher, true);
+});
+
+test('stateFromCms: Data alone → configProvided false and an empty config', () => {
+  const { state, configProvided } = stateFromCms({ data: RT_DATA });
+  assert.equal(configProvided, false);
+  assert.deepEqual(state.config, {});
+});
+
+test('stateFromCms: a legacy one-chunk JSON config counts as provided; a filled box wins', () => {
+  const legacy = JSON.stringify({ ...JSON.parse(RT_DATA), caption: 'Old', config: { highlightCol: 1 } });
+  const a = stateFromCms({ data: legacy });
+  assert.equal(a.configProvided, true);
+  assert.equal(a.state.config.highlightCol, 1);
+  assert.equal(a.state.caption, 'Old');
+  const b = stateFromCms({ data: legacy, caption: 'New', config: '{"highlightCol":2}' });
+  assert.equal(b.state.config.highlightCol, 2);
+  assert.equal(b.state.caption, 'New');
+});
+
+test('round trip: an untouched import emits the same four fields; a divider changes Config only', () => {
+  const { state } = stateFromCms({
+    data: RT_DATA, caption: 'Sample caption',
+    footnotes: '<p><em>* First note.</em></p><p>** Second note.</p>', config: RT_CONFIG,
+  });
+  const base = fieldValues(state);
+  assert.deepEqual(fieldValues(JSON.parse(JSON.stringify(state))), base);
+  state.config.colDividers = [2, 3];
+  const now = fieldValues(state);
+  assert.equal(now.data, base.data);
+  assert.equal(now.caption, base.caption);
+  assert.equal(now.footnotes, base.footnotes);
+  assert.notEqual(now.config, base.config);
+  assert.deepEqual(JSON.parse(now.config).colDividers, [2, 3]);
+  // the untouched options survive the edit (the old trap dropped them)
+  assert.equal(JSON.parse(now.config).stickyFirstCol, true);
+  assert.equal(JSON.parse(now.config).mobileSwitcher, true);
+});
+
+test('stateFromCms: TSV Data with tsvGroups:false keeps label-only rows as normal rows', () => {
+  const tsv = '\tA\tB\nLabel only\t\t\nRow\t1\t2';
+  const withCfg = stateFromCms({ data: tsv, config: '{"tsvGroups":false}' });
+  assert.equal(withCfg.state.rows[0].group, undefined);
+  const noCfg = stateFromCms({ data: tsv });
+  assert.equal(noCfg.state.rows[0].group, true);
+});
+
+test('footnotesFromCms: rich-text HTML and plain editor text both become lines', () => {
+  assert.deepEqual(
+    footnotesFromCms('<p><em>* One &amp; two.<br>** Three.</em></p><p>Four &lt;5</p>'),
+    ['* One & two.', '** Three.', 'Four <5']);
+  assert.deepEqual(footnotesFromCms('* One\n\n** Two\r\n'), ['* One', '** Two']);
+  assert.deepEqual(footnotesFromCms(''), []);
+});
+
+test('configFromCms: empty → null; bad JSON and non-objects → editor-facing errors', () => {
+  assert.equal(configFromCms('  '), null);
+  assert.deepEqual(configFromCms('{"highlightCol":1}'), { highlightCol: 1 });
+  assert.throws(() => configFromCms('{"highlightCol":'), /valid JSON/);
+  assert.throws(() => configFromCms('[1,2]'), /one \{ … \} object/);
+});
+
+test('dataErrorHint + stateFromCms: Config pasted after the Data gets a pointed message', () => {
+  const glued = RT_DATA + '\n' + RT_CONFIG;
+  assert.match(dataErrorHint(glued, new Error('x')), /Config box/);
+  assert.throws(() => stateFromCms({ data: glued }), /Config box/);
+  assert.throws(() => stateFromCms({ data: '  ' }), /Data field first/);
+});
