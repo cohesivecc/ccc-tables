@@ -56,6 +56,9 @@ export function configJSON(state) {
       !(c.firstColMax === 50 || c.firstColMax === '50' || c.firstColMax === '50%')) {
     out.firstColMax = c.firstColMax;
   }
+  // maxHeight (renderer ≥ 0.6.2) has no builder control — carry an imported
+  // value through so a round trip doesn't silently drop it. Off = implicit.
+  if (ccc().maxHeightCss(c.maxHeight)) out.maxHeight = c.maxHeight;
   // Per-column alignment: normalize via the renderer's own alignValue (no
   // drift), drop trailing unset slots, emit only if something is set.
   if (Array.isArray(c.align)) {

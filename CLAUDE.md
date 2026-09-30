@@ -25,7 +25,8 @@ figures anywhere in it (tests use synthetic fixtures only).
   in a new tagged release, never arbitrary HTML/components.
 - Backward compatibility: full-JSON `Data` blobs must keep working alongside
   TSV and the split-field overlay.
-- Tests: `node --test test/parse.test.mjs` (pure-logic coverage; DOM behavior is
+- Tests: `node --test test/*.test.mjs` (pure logic + stylesheet contract; DOM behavior is
   verified on the template's staging site).
-- Release: bump `VERSION` in ccc-tables.js + the header comments + README pin,
+- Release: bump `VERSION` in ccc-tables.js + the header comments + README pin +
+  package.json version, add a CHANGELOG.md entry,
   tag `vX.Y.Z`, push tags.

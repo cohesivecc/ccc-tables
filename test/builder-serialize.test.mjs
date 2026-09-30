@@ -64,6 +64,18 @@ test('configJSON: firstColMax — default cap stays implicit, off/custom emit', 
   assert.deepEqual(JSON.parse(configJSON(s)), { firstColMax: 40 });
 });
 
+test('configJSON: maxHeight (v0.6.2 opt-in) survives a round trip; off values stay implicit', () => {
+  const base = () => fromParsed({ columns: [{ text: 'A' }, { text: 'B' }], rows: [] });
+  let s = base(); s.config = { maxHeight: '60vh' };
+  assert.deepEqual(JSON.parse(configJSON(s)), { maxHeight: '60vh' });
+  s = base(); s.config = { maxHeight: true };
+  assert.deepEqual(JSON.parse(configJSON(s)), { maxHeight: true });
+  for (const off of ['none', false, 0, '']) {
+    s = base(); s.config = { maxHeight: off };
+    assert.equal(configJSON(s), '', JSON.stringify(off));
+  }
+});
+
 test('configJSON: align — normalized, trailing-unset trimmed, off when all unset', () => {
   const base = () => fromParsed({ columns: [{ text: 'A' }, { text: 'B' }, { text: 'C' }], rows: [] });
   let s = base(); s.config = { align: [null, 'center', null] };

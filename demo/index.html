@@ -62,7 +62,35 @@ Support	[link:tel:+18005550100|Call the plan]	[link:https://example.com/beta|Bet
 </section>
 
 <section>
-  <h2>3 — Error states</h2>
+  <h2>3 — v0.6.2: centred first column under the cap; opt-in maxHeight</h2>
+  <div ccc-data="tables">
+    <script type="application/json" data-ccc-table="center-demo">Coverage level	Monthly cost	Per paycheck
+Employee	$10	$5
+Employee + spouse or domestic partner	$20	$10
+Family	$30	$15</script>
+    <script type="application/json" data-ccc-table-config="center-demo">{ "align": ["center", "center", "center"], "mobileSwitcher": true }</script>
+    <script type="application/json" data-ccc-table="scroll-demo">Item	Option Alpha	Option Beta
+Row 1	a	b
+Row 2	a	b
+Row 3	a	b
+Row 4	a	b
+Row 5	a	b
+Row 6	a	b
+Row 7	a	b
+Row 8	a	b
+Row 9	a	b
+Row 10	a	b
+Row 11	a	b
+Row 12	a	b</script>
+    <script type="application/json" data-ccc-table-config="scroll-demo">{ "maxHeight": "12rem" }</script>
+  </div>
+  <div ccc-table="center-demo"></div>
+  <p>Opt-in <code>"maxHeight": "12rem"</code> (sections 1–2 render at natural height):</p>
+  <div ccc-table="scroll-demo"></div>
+</section>
+
+<section>
+  <h2>4 — Error states</h2>
   <div ccc-table="missing-slug"></div>
   <div ccc-data="tables">
     <script type="application/json" data-ccc-table="broken-json">{"columns": [oops</script>

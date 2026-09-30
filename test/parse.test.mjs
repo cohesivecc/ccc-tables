@@ -269,3 +269,26 @@ test('overlay: absent extras leave the blob untouched', () => {
   assert.equal(out.caption, 'inline');
   assert.deepEqual(out.config, { highlightCol: 1 });
 });
+
+// ---------- maxHeightCss (v0.6.2 opt-in internal vertical scroll) ----------
+
+test('maxHeightCss: unset / off values → null (natural height, the v0.6.2 default)', () => {
+  for (const v of [undefined, null, '', 'none', false, 0, '0']) {
+    assert.equal(ccc.maxHeightCss(v), null, JSON.stringify(v));
+  }
+});
+
+test('maxHeightCss: true restores the pre-0.6.2 cap (70vh)', () => {
+  assert.equal(ccc.maxHeightCss(true), '70vh');
+});
+
+test('maxHeightCss: a bare number means viewport-height percent', () => {
+  assert.equal(ccc.maxHeightCss(60), '60vh');
+  assert.equal(ccc.maxHeightCss('60'), '60vh');
+  assert.equal(ccc.maxHeightCss(' 55.5 '), '55.5vh');
+});
+
+test('maxHeightCss: an explicit length passes through', () => {
+  assert.equal(ccc.maxHeightCss('40rem'), '40rem');
+  assert.equal(ccc.maxHeightCss('600px'), '600px');
+});

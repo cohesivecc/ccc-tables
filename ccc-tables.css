@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.6.1 — renderer styles (Cohesive CCC starter)
+ * ccc-tables v0.6.2 — renderer styles (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Base table typography/borders come from the CCC starter's `table_*` class
@@ -28,7 +28,14 @@
 
 /* ---------- mechanics + starter-family overrides ---------- */
 
-.ccc-table_scroll { overflow-x: auto; overscroll-behavior-x: contain; max-height: 70vh; overflow-y: auto; }
+.ccc-table_scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+/* v0.6.2: tables render at natural height (horizontal scroll only). The old
+   70vh internal scroll is opt-in per table via config.maxHeight (→ the
+   ccc-scroll-y attribute + --ccc-scroll-max on the outer). Screen only — a
+   capped scroll region would clip the table on paper. */
+@media screen {
+  [ccc-scroll-y] .ccc-table_scroll { max-height: var(--ccc-scroll-max, 70vh); overflow-y: auto; }
+}
 .ccc-table thead .table_header { position: sticky; top: 0; z-index: 2; background-color: var(--ccc-cat-700, #1f3d38); color: var(--ccc-cat-on-dark, #fff); border-color: color-mix(in oklab, #fff 25%, var(--ccc-cat-700, #1f3d38)); }
 .ccc-table thead .table_row:nth-child(2) .table_header { top: 2.6em; }
 .ccc-table .table_row.is-legend-row .table_header { background-color: var(--ccc-cat-100, #e9f1ee); color: var(--ccc-cat-700, #1f3d38); }
@@ -58,6 +65,10 @@
    the value columns keep their share, while short first columns stay narrow. */
 [ccc-clamp-first] { container-type: inline-size; }
 [ccc-clamp-first] .ccc-table_rh { width: fit-content; max-width: var(--ccc-first-col-max, 50cqi); }
+/* v0.6.2: a fit-content box sits at the start of its cell, so text-align on the
+   cell alone can't move it — a centred/right col 0 (config.align) moves the box. */
+[ccc-clamp-first] [data-ccc-align="center"] > .ccc-table_rh { margin-inline: auto; }
+[ccc-clamp-first] [data-ccc-align="right"] > .ccc-table_rh { margin-inline-start: auto; }
 
 /* Per-column text alignment (config.align). Deliberately NOT zero-specificity:
    (0,2,0) must out-rank the starter's own .table_cell / .table_header default
@@ -80,7 +91,7 @@
 /* Footnotes render as an attached footer row: full width, continuing the table
    frame (side + bottom borders in the table's own Row/border token). The block
    sits BELOW the scroll wrapper on purpose — a real tfoot would scroll
-   horizontally with wide tables and hide inside the max-height scroll region. */
+   horizontally with wide tables (and hide inside an opt-in maxHeight region). */
 :where(.ccc-table_footnotes) { font-size: .78rem; padding: .7em 1em .55em; border-style: none solid solid; border-width: 0 1px 1px; border-color: var(--_table-row-styles---row--border, #d8dde2); }
 :where(.ccc-table_footnotes p) { margin: 0 0 .35em; opacity: .72; }
 /* The footnotes block hugs its frame: its first/last child shed the outer
@@ -104,7 +115,9 @@
 
 /* ---------- mobile switcher (mechanics) ---------- */
 
-@media (max-width: 767px) {
+/* `screen and` (v0.6.2): a ~720px print sheet must NOT match — paper gets the
+   full desktop table, not one plan column + the chip toolbar. */
+@media screen and (max-width: 767px) {
   [ccc-mobile-switcher] .ccc-table_toolbar { display: block; }
   [ccc-mobile-switcher] [data-ccc-colhide] { display: none; }
   [ccc-mobile-switcher] thead { display: none; }
@@ -118,4 +131,5 @@
   [ccc-mobile-switcher] tbody .table_header.is-row-header { border-bottom: none; padding-bottom: .25em; }
   /* Stacked rows are full-width — the first-column cap would crush the label. */
   [ccc-mobile-switcher] .ccc-table_rh { max-width: none; }
+  [ccc-mobile-switcher] [data-ccc-align] > .ccc-table_rh { margin-inline: 0; }
 }

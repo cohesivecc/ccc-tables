@@ -17,11 +17,18 @@ Load the script and stylesheet once per page (site-wide custom code or an
 embed), pinned to a release tag:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.6.1/ccc-tables.css">
-<script src="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.6.1/ccc-tables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.6.2/ccc-tables.css">
+<script src="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.6.2/ccc-tables.min.js"></script>
 ```
 
 jsDelivr serves `.min.js`/`.min.css` automatically — no build step in this repo.
+Release notes: [CHANGELOG.md](CHANGELOG.md).
+
+**Height (v0.6.2+):** tables render at their natural height — the wrapper
+scrolls horizontally for wide tables only. The pre-0.6.2 internal 70vh scroll
+is opt-in per table via `maxHeight` in Config. A site-head override
+`.ccc-table_scroll{max-height:none;overflow-y:visible}` (the old workaround) is
+redundant from 0.6.2 and can be deleted.
 
 ## Styling: what the stylesheet owns vs the Designer
 
@@ -147,12 +154,13 @@ renderer accepts the attribute on any element and keeps the rich HTML verbatim.
 | --- | --- |
 | `stickyFirstCol` | first column sticks while scrolling horizontally |
 | `collapsibleGroups` | group rows become expand/collapse toggles |
-| `mobileSwitcher` | ≤767px: chip toolbar shows one value column at a time (auto-disabled when body cells span) |
+| `mobileSwitcher` | screens ≤767px: chip toolbar shows one value column at a time (span-aware since v0.4). Screen-only since v0.6.2 — print always gets the full table |
 | `highlightCol` | zero-based grid column tinted with the category wash (a merged cell tints whenever the column falls inside its span) |
 | `tsvGroups` | `false` disables TSV group-row detection |
 | `firstColMax` | first-column width cap, percent of the table (default `50`; a no-op unless the column would exceed it). Accepts `50` / `"50%"`, an explicit length (`"30ch"`), or `"none"` to disable |
-| `align` | per-column text alignment, indexed by grid column: `["left","center", …]` — `null`/omitted keeps the site default (first column left, others centered). Only `left`/`center`/`right`; ignored per-cell in the stacked mobile switcher |
+| `align` | per-column text alignment, indexed by grid column: `["left","center", …]` — `null`/omitted keeps the site default (first column left, others centered). Only `left`/`center`/`right`; ignored per-cell in the stacked mobile switcher. A centred/right first column also moves its capped `firstColMax` box (v0.6.2+; before that, centring col 0 needed `"firstColMax": false`) |
 | `colDividers` | grid columns that get a vertical rule on their **left** edge — e.g. `[4]` to divide two plan groups. Reskin via `--ccc-divide-color` |
+| `maxHeight` | **v0.6.2+**, opt-in internal vertical scroll (the default is natural height): `true` (= 70vh, the pre-0.6.2 cap), a bare number (`60` = 60vh), or a length (`"40rem"`). Lets a sticky header stay in view while a very long table scrolls. Screen only — print is never clipped |
 
 ### Cell tokens
 
@@ -178,6 +186,7 @@ the mount — authoring mistakes fail loudly, not blankly.
 The script exposes `window.cccTables` (and CommonJS exports for Node):
 `version`, `init()`, `parseData(raw, opts)`, `parseTSV(text, opts)`,
 `buildTable(data, mountEl)`, `resolveGrid(rows)`, `firstColMaxCss(value)`,
+`maxHeightCss(value)`,
 `alignValue(value)`, `fmt(text)`, `overlay(data, extras)`.
 The builder tool consumes these so its preview IS the production renderer.
 

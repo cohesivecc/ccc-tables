@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.6.1 — CMS-data-driven table renderer (Cohesive CCC starter)
+ * ccc-tables v0.6.2 — CMS-data-driven table renderer (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Renders semantic table markup from data blobs in the DOM:
@@ -18,16 +18,19 @@
  *   [nbsp] = non-breaking space — keeps two short words on one line)
  *
  * Table-level config (all optional): stickyFirstCol, collapsibleGroups,
- *   mobileSwitcher, firstColMax, highlightCol, align, colDividers.
+ *   mobileSwitcher, firstColMax, highlightCol, align, colDividers, maxHeight.
  *   align        per-column text-align, indexed by grid column:
  *                  ["left","center", …]  (unset = inherit the site defaults)
+ *   maxHeight    opt-in internal vertical scroll (screen only; the default is
+ *                  natural height since v0.6.2): true (= 70vh), 60 (= 60vh),
+ *                  or a length ("40rem")
  *   colDividers  grid columns that get a vertical rule on their LEFT edge —
  *                  e.g. [4] to divide two plan groups: {"colDividers":[4]}
  */
 (function () {
   'use strict';
 
-  var VERSION = '0.6.1';
+  var VERSION = '0.6.2';
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -122,6 +125,18 @@
     return s;
   }
 
+  /* config.maxHeight → CSS max-height for an internal vertical scroll, or null
+     (off — natural height, the default since v0.6.2). true restores the old
+     70vh cap; a bare number means vh; an explicit length passes through. */
+  function maxHeightCss(v) {
+    if (v == null || v === '' || v === 'none' || v === false || v === 0 || v === '0') return null;
+    if (v === true) return '70vh';
+    if (typeof v === 'number') return v + 'vh';
+    var s = String(v).trim();
+    if (/^\d+(\.\d+)?$/.test(s)) return parseFloat(s) + 'vh';
+    return s;
+  }
+
   /* config.align entry → a valid text-align keyword, or null (inherit). */
   function alignValue(v) {
     if (v == null) return null;
@@ -136,6 +151,13 @@
     var wrapper = el('div', 'table_wrapper ccc-table_scroll');
     var table = el('table', 'table_component is-layout-auto');
     if (cfg.stickyFirstCol) outer.setAttribute('ccc-sticky-first', '');
+    /* v0.6.2: natural height by default; config.maxHeight opts back into an
+       internal vertical scroll (the region the sticky thead pins inside). */
+    var scrollMax = maxHeightCss(cfg.maxHeight);
+    if (scrollMax) {
+      outer.setAttribute('ccc-scroll-y', '');
+      outer.style.setProperty('--ccc-scroll-max', scrollMax);
+    }
     if (data.caption) table.appendChild(el('caption', 'ccc-table_caption', data.caption));
     var headRows = data.headerRows || (data.columns ? [{ cells: data.columns.map(function (c) { var t = (c && typeof c === 'object') ? (c.text || '') : c; return { text: t, header: true, colspan: c && c.colspan }; }) }] : []);
     var thead = el('thead', 'table_head');
@@ -374,6 +396,7 @@
     parseTSV: parseTSV,
     resolveGrid: resolveGrid,
     firstColMaxCss: firstColMaxCss,
+    maxHeightCss: maxHeightCss,
     alignValue: alignValue,
     fmt: fmt,
     buildTable: buildTable,
