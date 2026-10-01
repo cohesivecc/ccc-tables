@@ -17,8 +17,8 @@ Load the script and stylesheet once per page (site-wide custom code or an
 embed), pinned to a release tag:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.6.2/ccc-tables.css">
-<script src="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.6.2/ccc-tables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.7.0/ccc-tables.css">
+<script src="https://cdn.jsdelivr.net/gh/cohesivecc/ccc-tables@0.7.0/ccc-tables.min.js"></script>
 ```
 
 jsDelivr serves `.min.js`/`.min.css` automatically — no build step in this repo.
@@ -160,6 +160,7 @@ renderer accepts the attribute on any element and keeps the rich HTML verbatim.
 | `firstColMax` | first-column width cap, percent of the table (default `50`; a no-op unless the column would exceed it). Accepts `50` / `"50%"`, an explicit length (`"30ch"`), or `"none"` to disable |
 | `align` | per-column text alignment, indexed by grid column: `["left","center", …]` — `null`/omitted keeps the site default (first column left, others centered). Only `left`/`center`/`right`; ignored per-cell in the stacked mobile switcher. A centred/right first column also moves its capped `firstColMax` box (v0.6.2+; before that, centring col 0 needed `"firstColMax": false`) |
 | `colDividers` | grid columns that get a vertical rule on their **left** edge — e.g. `[4]` to divide two plan groups. Reskin via `--ccc-divide-color` |
+| `firstColLabels` | **v0.7+**: `false` renders the first column as plain cells instead of bold row-label headers (for grids with no row headings). Per-cell `"header": true` still works |
 | `maxHeight` | **v0.6.2+**, opt-in internal vertical scroll (the default is natural height): `true` (= 70vh, the pre-0.6.2 cap), a bare number (`60` = 60vh), or a length (`"40rem"`). Lets a sticky header stay in view while a very long table scrolls. Screen only — print is never clipped |
 
 ### Cell tokens
@@ -192,43 +193,42 @@ The builder tool consumes these so its preview IS the production renderer.
 
 ## Builder (authoring tool)
 
-`builder/` is a standalone static page for Marketer-seat contributors: paste a
-range copied from Excel/Google Sheets (or an existing `Data` field), click-
-configure it (group rows, cell merges, multi-row headers, header-cell flags,
-highlight column, per-column alignment, column dividers, token palette,
-caption/footnotes/options, undo/redo), and copy
-the four CMS field values —
-**Data** (TSV when round-trip-safe, else JSON with a stated reason), **Caption**,
-**Footnotes** (pastes as rich text), **Config**. The preview pane loads the
-pinned jsDelivr build of this renderer (release-tag picker, mobile width
-toggle), fed the exact strings the copy buttons emit — preview == production.
-Drafts autosave to the browser's localStorage.
+`builder/` is a standalone static page for Marketer-seat contributors, in
+three steps — **Start → Edit → Publish**:
 
-**Editing a table that's already in the CMS (round trip).** The import panel
-mirrors the output: paste the item's **Data**, **Config**, **Caption** and
-**Footnotes** into their matching boxes. Config matters most — dividers,
-alignment, highlight and the options checkboxes live in Config, not Data, so a
-Data-only import starts from blank options and any Config click would emit a
-Config that *replaces* the table's live one (the builder warns about exactly
-this). After import, each copy box is marked **Changed — paste this** or
-**Unchanged — skip**, compared against the builder's own serialization of what
-came in (so TSV-vs-JSON and key-order differences with the CMS text never show
-as changes). **I've pasted the changes** resets the markers. A Data box holding
-only a spreadsheet range, with the other boxes empty, is treated as a new table
-(every field gets pasted). The legacy one-chunk JSON (`caption`/`footnotes`/
-`config` keys inside Data) still imports; a filled box wins over its keys.
-Caveat: footnotes are re-emitted as plain `<p>` lines, so inline formatting from
-the CMS (e.g. italics) is dropped if you paste an edited Footnotes box back.
+- **Start.** Paste a range copied from Excel/Google Sheets (first row = the
+  column headings; a row with only its first cell filled = a tinted group
+  band), or edit a table that's already in the CMS by pasting its **Data**
+  and **Config** fields. Table title and Footnotes stay in the CMS. Legacy
+  one-chunk JSON blobs import; Publish converts them to the split-field model.
+- **Edit.** A spreadsheet-style grid (arrow keys/Enter move, shift-click
+  selects a range, pasting a range fills cells), an inspector for whatever is
+  selected — column (alignment, highlight, divider, move/insert/delete), row
+  (values vs tinted group band, header rows), cell (merge/unmerge, treat as a
+  label) — table settings with plain-language hints, and an Insert menu for
+  the cell tokens. New tables default `stickyFirstCol` + `collapsibleGroups`
+  on. **Previews** sit under the grid: desktop at 824px (the CCC article
+  column) and phone at 375px side by side, rendered by the pinned jsDelivr
+  build (release-tag picker). Controls a pinned renderer doesn't support are
+  disabled with the release that adds them.
+- **Publish.** Lists only the fields to act on — Data (TSV when
+  round-trip-safe, else JSON with a stated reason), Table title, Config —
+  each marked Changed / No change / Clear against the builder's own
+  serialization of the import, so format-only differences with the CMS text
+  never show as changes. Footnotes are preview-only: author them in the CMS
+  Rich Text field (cell markers `^1`, `^*` are cross-checked, and footnotes
+  trapped inside a legacy Data blob get a copy-out rescue).
 
-Hosted via GitHub Pages (Settings → Pages → Deploy from branch → `master`,
-`/ (root)`): `https://cohesivecc.github.io/ccc-tables/builder/`. Cell richness
-is tokens-only by design — the builder never inserts site components.
+Drafts autosave to the browser's localStorage. Hosted via GitHub Pages
+(Settings → Pages → Deploy from branch → `master`, `/ (root)`):
+`https://cohesivecc.github.io/ccc-tables/builder/`. Cell richness is
+tokens-only by design — the builder never inserts site components.
 
-Caution shared with Tier-1 pastes: a spreadsheet cell containing a LINE BREAK is
-quoted by Excel/Sheets on copy; the builder's import handles that quoting, but the
-renderer's own `parseTSV` (a direct CMS `Data` paste) does not — multiline cells
-must go through the builder (which emits JSON for them). Renderer quote-handling is
-a v0.3 candidate.
+Caution shared with Tier-1 pastes: a spreadsheet cell containing a LINE BREAK
+is quoted by Excel/Sheets on copy; the builder's import handles that quoting,
+but the renderer's own `parseTSV` (a direct CMS `Data` paste) does not —
+multiline cells must go through the builder (which emits JSON for them).
+Renderer-side quote handling remains a candidate.
 
 Develop: serve the repo root over HTTP (ES modules don't load from `file://`),
 `python3 scripts/serve.py` (a no-store static server — plain `http.server` lets the browser cache modules stale), then open `/builder/`. Logic tests:

@@ -59,6 +59,9 @@ export function configJSON(state) {
   // maxHeight (renderer ≥ 0.6.2) has no builder control — carry an imported
   // value through so a round trip doesn't silently drop it. Off = implicit.
   if (ccc().maxHeightCss(c.maxHeight)) out.maxHeight = c.maxHeight;
+  // firstColLabels (renderer ≥ 0.7): labels-on is the default — emit only
+  // the explicit off state.
+  if (c.firstColLabels === false) out.firstColLabels = false;
   // Per-column alignment: normalize via the renderer's own alignValue (no
   // drift), drop trailing unset slots, emit only if something is set.
   if (Array.isArray(c.align)) {
@@ -302,9 +305,19 @@ export function validate(state) {
     errors.push('Data does not re-parse: ' + e.message);
     return { errors, warnings };
   }
+  rowWidthIssues(state).forEach(({ row, covered, want }) => {
+    warnings.push('Row ' + (row + 1) + ' covers ' + covered + ' of ' + want + ' columns');
+  });
+  return { errors, warnings };
+}
+
+/* Non-group body rows whose resolved width (rowspans from above included)
+   differs from the header width: [{ row, covered, want }], row zero-based. */
+export function rowWidthIssues(state) {
   const want = colCount(state);
   const placed = ccc().resolveGrid(state.rows);
   const carry = []; // grid cols covered in following rows by rowspans
+  const issues = [];
   state.rows.forEach((row, i) => {
     let covered = carry[i] ? carry[i].size : 0;
     placed[i].forEach(p => {
@@ -315,9 +328,7 @@ export function validate(state) {
         for (let cc = p.col; cc < p.col + p.span; cc++) carry[rr].add(cc);
       }
     });
-    if (!row.group && covered !== want) {
-      warnings.push('Row ' + (i + 1) + ' covers ' + covered + ' of ' + want + ' columns');
-    }
+    if (!row.group && covered !== want) issues.push({ row: i, covered, want });
   });
-  return { errors, warnings };
+  return issues;
 }

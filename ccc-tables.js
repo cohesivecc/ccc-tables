@@ -1,5 +1,5 @@
 /*!
- * ccc-tables v0.6.2 — CMS-data-driven table renderer (Cohesive CCC starter)
+ * ccc-tables v0.7.0 — CMS-data-driven table renderer (Cohesive CCC starter)
  * https://github.com/cohesivecc/ccc-tables
  *
  * Renders semantic table markup from data blobs in the DOM:
@@ -18,7 +18,9 @@
  *   [nbsp] = non-breaking space — keeps two short words on one line)
  *
  * Table-level config (all optional): stickyFirstCol, collapsibleGroups,
- *   mobileSwitcher, firstColMax, highlightCol, align, colDividers, maxHeight.
+ *   mobileSwitcher, firstColMax, highlightCol, align, colDividers, maxHeight,
+ *   firstColLabels (v0.7: false renders the first column as plain cells
+ *   instead of bold row-label headers).
  *   align        per-column text-align, indexed by grid column:
  *                  ["left","center", …]  (unset = inherit the site defaults)
  *   maxHeight    opt-in internal vertical scroll (screen only; the default is
@@ -30,7 +32,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '0.6.2';
+  var VERSION = '0.7.0';
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -146,6 +148,9 @@
 
   function buildTable(data, mount) {
     var cfg = data.config || {};
+    /* v0.7: false = first column renders as plain cells. Sticky, the width
+       cap and the phone switcher key off data-col and are unchanged. */
+    var firstColLabels = cfg.firstColLabels !== false;
     var outer = el('div', 'table_outer ccc-table');
     var toolbar = el('div', 'ccc-table_toolbar');
     var wrapper = el('div', 'table_wrapper ccc-table_scroll');
@@ -225,7 +230,7 @@
         });
       } else {
         placed.forEach(function (p) {
-          var isHead = p.cell.header || p.col === 0;
+          var isHead = p.cell.header || (firstColLabels && p.col === 0);
           var cell = el(isHead ? 'th' : 'td', isHead ? 'table_header is-row-header' : 'table_cell', '');
           if (isHead) cell.setAttribute('scope', 'row');
           cell.innerHTML = fmt(p.cell.text);

@@ -3,167 +3,163 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ccc-tables builder</title>
+<title>Table builder</title>
+<link rel="stylesheet" href="../ccc-tables.css">
 <link rel="stylesheet" href="builder.css">
 </head>
 <body>
 
-<header class="bar">
-  <h1>ccc-tables builder</h1>
-  <div class="bar_right">
-    <label class="bar_field">Preview renderer
-      <select id="version"></select>
-    </label>
-    <button id="load-sample" type="button">Load sample</button>
-    <button id="new-table" type="button">New</button>
-    <span id="autosave" class="bar_note" hidden>draft saved</span>
+<header class="top">
+  <h1 class="top_title">Table builder</h1>
+  <div class="steps" role="tablist" aria-label="Steps">
+    <button role="tab" id="tab-start" aria-controls="p-start" aria-selected="false" tabindex="-1"><span class="n" aria-hidden="true">1</span>Start</button>
+    <button role="tab" id="tab-edit" aria-controls="p-edit" aria-selected="false" tabindex="-1"><span class="n" aria-hidden="true">2</span>Edit</button>
+    <button role="tab" id="tab-publish" aria-controls="p-publish" aria-selected="false" tabindex="-1"><span class="n" aria-hidden="true">3</span>Publish <span class="badge badge-changed" id="pub-count" hidden></span></button>
+  </div>
+  <div class="spacer"></div>
+  <label class="pin">Site’s renderer
+    <select id="version"></select>
+  </label>
+  <div class="top_group">
+    <button class="btn btn-ghost btn-sm" id="undo" type="button" aria-keyshortcuts="Meta+Z">Undo</button>
+    <button class="btn btn-ghost btn-sm" id="redo" type="button" aria-keyshortcuts="Meta+Shift+Z">Redo</button>
+    <span class="saved" id="saved" role="status"></span>
   </div>
 </header>
 
-<p class="intro">
-  Author a table for the site's <strong>Tables</strong> CMS collection: paste a range
-  copied from Excel/Google&nbsp;Sheets (or an existing <code>Data</code> field), click-configure
-  it, then copy each field below into the CMS. The preview is the production renderer —
-  what you see is what publishes. Colors come from each site's own palette.
-</p>
+<main class="page">
 
-<main class="layout">
-  <section class="work">
-    <details class="paste" id="paste-details" open>
-      <summary>Start from an Excel/Sheets range — or edit a table that’s already in the CMS</summary>
-      <p class="hint paste_hint">Editing an existing table? Copy <strong>each</strong> of its CMS fields into
-        the matching box — especially <strong>Config</strong>: dividers, alignment, highlight and the options
-        checkboxes live there, not in Data. After you edit, the boxes on the right tell you which fields
-        changed and need pasting back.</p>
-      <label class="paste_field">Data <span class="hint">— the CMS Data field, or a range copied from Excel/Sheets (required)</span>
-        <textarea id="paste-box" rows="6" spellcheck="false"
-          placeholder="Copy the range in Excel and paste here — the first row becomes the header."></textarea>
-      </label>
-      <div class="paste_grid">
-        <label class="paste_field">Config <span class="hint">— the CMS Config field</span>
-          <textarea id="in-config" rows="2" spellcheck="false"
-            placeholder='{"stickyFirstCol":true,"colDividers":[2]}'></textarea>
+  <!-- ================= 1 · START ================= -->
+  <section role="tabpanel" id="p-start" aria-labelledby="tab-start" hidden>
+    <p class="start_current" id="start-current" hidden></p>
+    <div class="start">
+      <form class="card start_card" id="start-new" novalidate>
+        <h2>New table</h2>
+        <p class="small muted">Copy the range in Excel or Google Sheets and paste it here. The first row becomes the column headings. A row with only its first cell filled becomes a tinted group band.</p>
+        <label class="field">Spreadsheet range
+          <textarea class="mono" id="new-range" rows="7" spellcheck="false" aria-describedby="new-err" placeholder="Paste a range (⌘V)"></textarea>
         </label>
-        <label class="paste_field">Caption
-          <textarea id="in-caption" rows="2" spellcheck="true"></textarea>
-        </label>
-        <label class="paste_field">Footnotes <span class="hint">— copy from the CMS editor</span>
-          <textarea id="in-footnotes" rows="2" spellcheck="true"></textarea>
-        </label>
-      </div>
-      <div class="paste_row">
-        <button id="import" type="button">Import</button>
-        <span id="import-status" class="status"></span>
-      </div>
-    </details>
+        <p class="err" id="new-err"></p>
+        <div class="btn-row">
+          <button class="btn btn-primary" type="submit">Use this range</button>
+          <button class="btn btn-ghost" type="button" id="start-blank">Start from a blank table</button>
+        </div>
+      </form>
 
-    <div class="toolbar" id="grid-toolbar">
-      <div class="toolbar_group" aria-label="Rows">
-        <button data-act="add-row" type="button" title="Add a row below the selection">+ Row</button>
-        <button data-act="del-row" type="button" title="Delete the selected row">− Row</button>
-        <button data-act="row-up" type="button" title="Move the selected row up">↑</button>
-        <button data-act="row-down" type="button" title="Move the selected row down">↓</button>
-        <button data-act="group" type="button" title="Group rows label a band of rows (e.g. a salary band) and can collapse">Group row</button>
-      </div>
-      <div class="toolbar_group" aria-label="Columns">
-        <button data-act="add-col-left" type="button" title="Add a column before the selection">+ Col ←</button>
-        <button data-act="add-col" type="button" title="Add a column after the selection">+ Col →</button>
-        <button data-act="del-col" type="button" title="Delete the selected column">− Column</button>
-        <button data-act="col-left" type="button" title="Move the selected column left">◀</button>
-        <button data-act="col-right" type="button" title="Move the selected column right">▶</button>
-        <button data-act="highlight" type="button" title="Tint the selected column (e.g. a recommended plan)">Highlight</button>
-        <button data-act="align" type="button" title="Cycle the selected column’s text alignment: default → left → center → right (needs renderer ≥ 0.6)">Align</button>
-        <button data-act="divider" type="button" title="Toggle a vertical divider on the selected column’s left edge — e.g. between two plan groups (needs renderer ≥ 0.6)">Divider</button>
-      </div>
-      <div class="toolbar_group" aria-label="History">
-        <button data-act="undo" type="button" title="Undo (⌘Z)">↺ Undo</button>
-        <button data-act="redo" type="button" title="Redo (⇧⌘Z)">↻ Redo</button>
-      </div>
-      <div class="toolbar_group" aria-label="Cells">
-        <button data-act="header-cell" type="button" title="Mark the selected body cells as header cells (bold label styling; always visible in the mobile plan switcher — e.g. an Employee Only sub-label)">Header cell</button>
-        <button data-act="merge" type="button" title="Merge the selected rectangle of cells (click one corner, shift-click the other)">Merge</button>
-        <button data-act="unmerge" type="button" title="Split the selected merged cell">Unmerge</button>
-      </div>
-      <div class="toolbar_group" aria-label="Header">
-        <button data-act="promote" type="button" title="Move the first body row into the header (multi-row header)">Row → Header</button>
-        <button data-act="demote" type="button" title="Move the last header row back into the body">Header → Row</button>
-      </div>
+      <form class="card start_card" id="start-cms" novalidate>
+        <h2>Edit a table that’s on the site</h2>
+        <p class="small muted">Paste the item’s <strong>Data</strong> field, and its <strong>Config</strong> field if it has one — alignment, dividers, highlight and the options live there. The Table title and Footnotes stay in the CMS.</p>
+        <label class="field">Data <span class="hint">required</span>
+          <textarea class="mono" id="in-data" rows="6" spellcheck="false" aria-describedby="data-err"></textarea>
+        </label>
+        <p class="err" id="data-err"></p>
+        <label class="field">Config
+          <textarea class="mono" id="in-config" rows="2" spellcheck="false" aria-describedby="config-err" placeholder="Leave empty if the item has none"></textarea>
+        </label>
+        <p class="err" id="config-err"></p>
+        <div class="btn-row"><button class="btn btn-primary" type="submit">Import</button></div>
+      </form>
     </div>
-
-    <div class="toolbar toolbar-tokens" aria-label="Cell tokens">
-      <span class="toolbar_label">Insert into cell:</span>
-      <button data-token="[check]" type="button" title="A check icon — “covered / yes”">✓ check</button>
-      <button data-token="[xmark]" type="button" title="An x icon — “not covered / no”">✕ xmark</button>
-      <button data-token="[dollar]" type="button" title="A dollar icon">$ dollar</button>
-      <button data-token="[link:https://example.com|label]" type="button" title="A link — edit the url and label">link</button>
-      <button data-token="[tip:term|explanation]" type="button" title="A hover tooltip — edit the term and explanation">tip</button>
-      <button data-token="[reg:regular-weight text]" type="button" title="Regular weight — de-emphasize part of a bold first-column label (e.g. a parenthetical). Select text first to wrap it.">reg</button>
-      <button data-token="[nbsp]" type="button" title="A non-breaking space — keeps two short words on the same line (e.g. No[nbsp]Orthodontics). Place it between the words. Needs renderer ≥ 0.6.">nbsp</button>
-      <button data-token="^1" type="button" title="A footnote marker — superscript, matching a footnote line. Use a number (^1) or a symbol: ^* ^** ^*** ^† ^‡ ^§">^1 footnote</button>
-    </div>
-
-    <div id="grid" class="grid" aria-label="Table editor"></div>
-    <p id="grid-status" class="status" role="status"></p>
+    <p class="start_foot small muted">Just exploring? <button class="btn btn-sm" type="button" id="load-sample">Load the sample table</button></p>
   </section>
 
-  <aside class="panel">
-    <label class="panel_field">Caption
-      <input id="caption" type="text" placeholder="e.g. 2027 Biweekly Medical Premiums — …">
-    </label>
+  <!-- ================= 2 · EDIT ================= -->
+  <section role="tabpanel" id="p-edit" aria-labelledby="tab-edit" hidden>
+    <div class="edit">
+      <div class="edit_main">
+      <section class="card editor" aria-label="Table editor">
+        <div class="editor_bar">
+          <p class="ctx" id="ctx"></p>
+          <div class="spacer"></div>
+          <div class="menu">
+            <button class="btn btn-sm" type="button" id="insert-btn" aria-expanded="false" aria-controls="insert-menu">Insert ▾</button>
+            <div class="popover menu_list" id="insert-menu" hidden>
+              <p class="section-label">Insert into the cell</p>
+              <div id="insert-items"></div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-wrap"><table class="grid" id="grid"></table></div>
+        <p class="grid-help">Letters and numbers select a column or row · Shift-click selects a range · Arrow keys and Enter move between cells (Shift+Enter for a line break) · Paste a range from a spreadsheet into any cell</p>
+      </section>
 
-    <label class="panel_field">Footnotes <span class="hint">(one per line)</span>
-      <textarea id="footnotes" rows="4" spellcheck="true"
-        placeholder="* Rates shown are biweekly.&#10;** Includes the wellness credit."></textarea>
-    </label>
+      <section class="card previews" aria-labelledby="pv-title">
+        <div class="previews_head">
+          <h2 id="pv-title">Preview</h2>
+          <p class="small muted" id="pv-sub"></p>
+        </div>
+        <ul class="compat" id="compat"></ul>
+        <div class="frames" id="frames">
+          <figure class="frame">
+            <figcaption>Desktop · 824px <span class="scale" id="desk-scale"></span></figcaption>
+            <div class="frame_box" id="desk-box"><iframe id="f-desk" title="Desktop preview, 824 pixels wide"></iframe></div>
+          </figure>
+          <figure class="frame">
+            <figcaption>Phone · 375px <span class="scale" id="phone-scale"></span></figcaption>
+            <div class="frame_box" id="phone-box"><iframe id="f-phone" title="Phone preview, 375 pixels wide"></iframe></div>
+          </figure>
+        </div>
+        <p class="xs muted">Colors are a stand-in palette; each site supplies its own.</p>
+      </section>
+      </div>
 
-    <fieldset class="panel_field">
-      <legend>Options</legend>
-      <label><input type="checkbox" id="cfg-stickyFirstCol"> Sticky first column</label>
-      <label><input type="checkbox" id="cfg-collapsibleGroups"> Collapsible group rows</label>
-      <label id="cfg-mobileSwitcher-label"><input type="checkbox" id="cfg-mobileSwitcher"> Mobile plan switcher
-        <span class="hint" id="switcher-note" hidden>— inert: this table has merged cells</span></label>
-      <label><input type="checkbox" id="cfg-firstColMax" title="Keeps a long first-column label from squashing the value columns — wraps it at half the table width instead. On by default; needs renderer ≥ 0.5."> Cap first column width (50%)</label>
-    </fieldset>
+      <aside class="card insp" aria-label="Inspector">
+        <div class="insp_ctx" id="insp-ctx"></div>
+        <p class="insp_status" id="insp-status" role="status"></p>
+        <details class="insp_tbl" id="tbl" open>
+          <summary>Table settings</summary>
+          <div class="tbl">
+            <label class="field">Table title <input type="text" id="t-title"></label>
+            <label class="field">Footnotes <span class="hint">preview only — the site uses the CMS Footnotes field</span>
+              <textarea id="t-foot" rows="3" aria-describedby="foot-note"></textarea></label>
+            <p class="note" id="foot-note"></p>
+            <fieldset class="group">
+              <legend class="section-label">Behavior</legend>
+              <label class="check"><input type="checkbox" id="t-sticky"><span>Keep the first column visible<span class="hint">while readers scroll sideways on a wide table</span></span></label>
+              <label class="check" id="collapse-label"><input type="checkbox" id="t-collapse"><span>Let readers collapse group bands<span class="hint">each band gets a ▾ toggle</span></span></label>
+              <label class="check"><input type="checkbox" id="t-switch"><span>Show one plan at a time on phones<span class="hint">readers switch plans with chips above the table</span></span></label>
+              <p class="gate" id="switch-gate" hidden></p>
+              <label class="check"><input type="checkbox" id="t-firstlabels"><span>First column holds row labels<span class="hint">bold headings naming each row — turn off for a plain data grid</span></span></label>
+              <p class="gate" id="firstlabels-gate" hidden></p>
+            </fieldset>
+            <label class="field">First column width
+              <select id="t-cap"></select>
+              <span class="hint">Keeps long row labels from squeezing the value columns.</span>
+              <span class="gate" id="cap-gate" hidden></span>
+            </label>
+            <label class="field">Height
+              <select id="t-height"></select>
+              <span class="hint">A scrolling region keeps the header row in view on very long tables.</span>
+              <span class="gate" id="height-gate" hidden></span>
+            </label>
+            <details class="adv">
+              <summary>Advanced</summary>
+              <label class="check"><input type="checkbox" id="t-tsvgroups"><span>Detect group bands in plain-text Data<span class="hint">a row with only its first cell filled becomes a band (on by default)</span></span></label>
+            </details>
+          </div>
+        </details>
+      </aside>
+    </div>
 
-    <h2 class="panel_heading">Copy into the CMS</h2>
-    <p id="sync-note" class="hint sync_note">New table — paste every field into a new CMS item.</p>
-    <button id="mark-pasted" type="button" class="mark_pasted" hidden
-      title="Resets the changed markers — use after you’ve pasted the changed fields into the CMS">I’ve pasted the changes</button>
-    <div class="out" id="out-data">
-      <div class="out_head"><strong>Data</strong> <span class="out_status"></span>
-        <button class="copy" type="button">Copy</button></div>
-      <pre class="out_value" tabindex="0"></pre>
+
+  </section>
+
+  <!-- ================= 3 · PUBLISH ================= -->
+  <section role="tabpanel" id="p-publish" aria-labelledby="tab-publish" hidden>
+    <div class="publish">
+      <div class="publish_head">
+        <div>
+          <h2 id="pub-title"></h2>
+          <p class="small muted" id="pub-sub"></p>
+        </div>
+        <button class="btn" type="button" id="mark-pasted">I’ve pasted these</button>
+      </div>
+      <div id="pub-errors"></div>
+      <div class="pub_list" id="pub-list"></div>
+      <div class="pub_notes" id="pub-notes"></div>
     </div>
-    <div class="out" id="out-caption">
-      <div class="out_head"><strong>Caption</strong> <span class="out_status"></span>
-        <button class="copy" type="button">Copy</button></div>
-      <pre class="out_value" tabindex="0"></pre>
-    </div>
-    <div class="out" id="out-footnotes">
-      <div class="out_head"><strong>Footnotes</strong> <span class="out_status"></span>
-        <button class="copy" type="button">Copy</button></div>
-      <pre class="out_value" tabindex="0"></pre>
-    </div>
-    <div class="out" id="out-config">
-      <div class="out_head"><strong>Config</strong> <span class="out_status"></span>
-        <button class="copy" type="button">Copy</button></div>
-      <pre class="out_value" tabindex="0"></pre>
-    </div>
-    <p id="warnings" class="status"></p>
-  </aside>
+  </section>
 </main>
-
-<section class="preview">
-  <div class="preview_bar">
-    <h2>Preview <span class="hint">— the production renderer, verbatim</span></h2>
-    <div class="preview_widths">
-      <button id="w-desktop" type="button" class="is-active">Desktop</button>
-      <button id="w-mobile" type="button">Mobile (375px)</button>
-    </div>
-  </div>
-  <p id="preview-note" class="status is-warn"></p>
-  <iframe id="preview" title="Table preview"></iframe>
-</section>
 
 <script src="../ccc-tables.js"></script>
 <script type="module" src="builder.js"></script>

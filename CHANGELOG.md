@@ -5,6 +5,20 @@ backward compatible with published `Data` / `Config` blobs unless it says
 otherwise. Entries before 0.6.2 are backfilled from the tag annotations — see
 `git show vX.Y.Z` for detail.
 
+## 0.7.0 — 2026-10-01
+
+- **`config.firstColLabels: false` (new)** renders first-column body cells as
+  plain cells instead of bold row-label headers — for grids that don't need
+  row headings. Absent/true keeps today's behavior. Sticky first column, the
+  width cap and the phone switcher are unchanged (they key off the column
+  position, not the label treatment).
+- **Builder rebuilt** as a step-based page (Start → Edit → Publish): inspector
+  instead of the button toolbar, side-by-side desktop (824px) / phone (375px)
+  previews on the pinned renderer, keyboard-first grid, renderer-version
+  gating with reasons, publish list of only the changed fields. Footnotes are
+  preview-only (authored in the CMS Rich Text field). Same URL; drafts moved
+  to a new storage key. Renderer payloads are unaffected.
+
 ## 0.6.2 — 2026-09-29
 
 - **Natural height by default.** `.ccc-table_scroll` no longer caps the table
