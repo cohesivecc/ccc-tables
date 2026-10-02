@@ -2,7 +2,8 @@
 
 Record of the redesign built on branch `explore/ui-refresh` at `builder/next/`,
 next to the live `builder/` (untouched until Alex decides to swap). Direction
-chosen from two clickable mockups (`builder/mockups/`): **B — steps + inspector**.
+chosen from two clickable mockups (throwaway, never committed; deleted after the
+decision): **B — steps + inspector**.
 
 ## Why
 
